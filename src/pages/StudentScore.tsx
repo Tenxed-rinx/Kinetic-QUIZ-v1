@@ -87,7 +87,7 @@ export default function StudentScore() {
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Your Score</p>
               <p className="text-3xl font-headline font-black text-primary">
-                {truncateScore(participant.score ?? 0)}<span className="text-lg text-on-surface-variant/50 ml-1">/{totalScorable}</span>
+                {truncateScore(participant.score ?? 0)}<span className="text-lg text-on-surface-variant/50 ml-1">/{participant.questionOrder?.length || totalScorable}</span>
               </p>
             </div>
 

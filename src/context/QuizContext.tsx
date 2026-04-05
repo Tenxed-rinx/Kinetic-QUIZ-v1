@@ -511,10 +511,15 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   const calculateScore = (participant: Participant, quiz: Quiz, overrideQuestions?: Question[], excludeParagraphs: boolean = false): number => {
     let score = 0;
-    const questions = overrideQuestions || quiz.questions || [];
+    const allQuestions = overrideQuestions || quiz.questions || [];
+    
+    // Use participant's specific question order if available, otherwise use all questions
+    const relevantQuestionIds = participant.questionOrder || allQuestions.map(q => q.id);
+    const relevantQuestions = allQuestions.filter(q => relevantQuestionIds.includes(q.id));
+    
     const answers = participant.answers || {};
 
-    questions.forEach(q => {
+    relevantQuestions.forEach(q => {
       const studentAnswer = answers[q.id];
       if (!studentAnswer) return;
 

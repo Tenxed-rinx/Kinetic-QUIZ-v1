@@ -369,12 +369,12 @@ export default function Dashboard() {
                       </td>
                       <td className="px-8 py-6 text-center">
                         <span className="font-headline font-black text-primary">
-                          {student.score !== undefined ? truncateScore(student.score) : '-'}<span className="text-[10px] text-on-surface-variant/50 ml-0.5">/{totalScorable}</span>
+                          {student.score !== undefined ? truncateScore(student.score) : '-'}<span className="text-[10px] text-on-surface-variant/50 ml-0.5">/{student.questionOrder?.length || totalScorable}</span>
                         </span>
                       </td>
                       <td className="px-8 py-6 text-center">
                         <span className="bg-surface-container-highest px-3 py-1 rounded-full text-xs font-bold text-on-surface-variant">
-                          Question {student.progress + 1}/{quiz.totalQuestions}
+                          {student.score !== undefined ? truncateScore(student.score) : '0'}/{student.questionOrder?.length || quiz.drawCount || quiz.totalQuestions} Correct
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">

@@ -68,11 +68,15 @@ export default function Reports() {
   }, [user, quizzes]);
 
   const getParticipantPercentage = (participant: Participant, quiz: Quiz) => {
-    const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
-    if (questions.length === 0) return 0;
+    const allQuestions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
+    if (allQuestions.length === 0) return 0;
     
-    const rawScore = getRawScore(participant, quiz, questions);
-    return Math.round((rawScore / questions.length) * 100);
+    // Use participant's specific question count as denominator
+    const totalQuestionsReceived = participant.questionOrder?.length || allQuestions.length;
+    if (totalQuestionsReceived === 0) return 0;
+
+    const rawScore = getRawScore(participant, quiz, allQuestions);
+    return Math.round((rawScore / totalQuestionsReceived) * 100);
   };
 
   const stats = useMemo(() => {
@@ -114,13 +118,20 @@ export default function Reports() {
 
     submitted.forEach(p => {
       const rawScore = getRawScore(p, quiz, questions);
+      const totalQuestionsReceived = p.questionOrder?.length || questions.length;
       totalRawScore += rawScore;
       if (rawScore > maxRawScore) maxRawScore = rawScore;
       if (rawScore < minRawScore) minRawScore = rawScore;
     });
 
     const avgRawScore = submitted.length > 0 ? Math.round((totalRawScore / submitted.length) * 100) / 100 : 0;
-    const avgPercentage = questions.length > 0 ? Math.round((avgRawScore / questions.length) * 100) : 0;
+    
+    // For average percentage, we should ideally average the percentages of each student
+    let totalPercentage = 0;
+    submitted.forEach(p => {
+      totalPercentage += getParticipantPercentage(p, quiz);
+    });
+    const avgPercentage = submitted.length > 0 ? Math.round(totalPercentage / submitted.length) : 0;
     
     return {
       count: participants.length,
@@ -128,7 +139,7 @@ export default function Reports() {
       avgPercentage,
       maxRawScore,
       minRawScore: submitted.length > 0 ? minRawScore : 0,
-      totalQuestions: questions.length,
+      totalQuestions: quiz.drawCount || questions.length,
       date: quiz.createdAt ? (quiz.createdAt.toDate ? quiz.createdAt.toDate().toLocaleDateString() : new Date(quiz.createdAt).toLocaleDateString()) : 'N/A'
     };
   };
@@ -144,8 +155,14 @@ export default function Reports() {
     // 1. Student Details Export (JSON)
     const studentData = participants.map(p => {
       const rawScore = getRawScore(p, quiz, questions);
+      const totalQuestionsReceived = p.questionOrder?.length || questions.length;
       const responses: Record<string, any> = {};
-      questions.forEach((q, idx) => {
+      
+      // Only include questions the student actually received
+      const relevantQuestionIds = p.questionOrder || questions.map(q => q.id);
+      const relevantQuestions = questions.filter(q => relevantQuestionIds.includes(q.id));
+
+      relevantQuestions.forEach((q, idx) => {
         const key = `Q${idx + 1}: ${q.text}`;
         responses[key] = p.answers[q.id] || "No Answer";
       });
@@ -153,7 +170,7 @@ export default function Reports() {
       return {
         Name: p.name,
         RollNumber: p.roll,
-        MarksScored: `${rawScore}/${questions.length}`,
+        MarksScored: `${rawScore}/${totalQuestionsReceived}`,
         Status: p.status,
         TimeTaken: p.timeTaken ? `${p.timeTaken}s` : 'N/A',
         Responses: responses
@@ -311,7 +328,7 @@ export default function Reports() {
                             <td className="px-6 py-5 font-body text-on-surface-variant">{p.roll}</td>
                             <td className="px-6 py-5">
                               <span className="text-sm font-medium text-on-surface-variant">
-                                {p.progress + 1}/{selectedQuiz.totalQuestions}
+                                {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions, true)}/{p.questionOrder?.length || selectedQuiz.drawCount || selectedQuiz.totalQuestions} Correct
                               </span>
                             </td>
                             <td className="px-6 py-5">
@@ -386,65 +403,71 @@ export default function Reports() {
                     </div>
                     
                     <div className="flex-grow overflow-y-auto p-8 space-y-8">
-                      {(quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions).map((q, idx) => {
-                        const studentAnswer = viewingSubmission.answers[q.id];
-                        const isCorrect = q.type === 'Paragraph' ? null : (
-                          q.type === 'Multiple Correct' || q.type === 'MSQ'
-                            ? (Array.isArray(studentAnswer) && Array.isArray(q.correctOption) && 
-                               studentAnswer.length === q.correctOption.length && 
-                               studentAnswer.every(val => q.correctOption.includes(val)))
-                            : studentAnswer === q.correctOption
-                        );
+                      {(() => {
+                        const allQuestions = quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions;
+                        const relevantQuestionIds = viewingSubmission.questionOrder || allQuestions.map(q => q.id);
+                        const relevantQuestions = allQuestions.filter(q => relevantQuestionIds.includes(q.id));
+                        
+                        return relevantQuestions.map((q, idx) => {
+                          const studentAnswer = viewingSubmission.answers[q.id];
+                          const isCorrect = q.type === 'Paragraph' ? null : (
+                            q.type === 'Multiple Correct' || q.type === 'MSQ'
+                              ? (Array.isArray(studentAnswer) && Array.isArray(q.correctOption) && 
+                                 studentAnswer.length === q.correctOption.length && 
+                                 studentAnswer.every(val => q.correctOption.includes(val)))
+                              : studentAnswer === q.correctOption
+                          );
 
-                        return (
-                          <div key={q.id} className="space-y-4 pb-8 border-b border-outline-variant/10 last:border-0">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex gap-3">
-                                <span className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center font-bold text-sm flex-shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <div>
-                                  <p className="font-headline font-bold text-on-surface text-lg">{q.text}</p>
-                                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{q.type}</span>
+                          return (
+                            <div key={q.id} className="space-y-4 pb-8 border-b border-outline-variant/10 last:border-0">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex gap-3">
+                                  <span className="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <div>
+                                    <p className="font-headline font-bold text-on-surface text-lg">{q.text}</p>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{q.type}</span>
+                                  </div>
+                                </div>
+                                {q.type !== 'Paragraph' && (
+                                  <span className={cn(
+                                    "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                                    isCorrect ? "bg-emerald-500/10 text-emerald-600" : "bg-error/10 text-error"
+                                  )}>
+                                    {isCorrect ? "Correct" : "Incorrect"}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Student's Answer</p>
+                                  <p className={cn(
+                                    "font-medium leading-relaxed",
+                                    q.type === 'Paragraph' ? "whitespace-pre-wrap" : ""
+                                  )}>
+                                    {Array.isArray(studentAnswer) ? studentAnswer.join(", ") : (studentAnswer || "No Answer")}
+                                  </p>
+                                </div>
+                                <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Correct Answer</p>
+                                  <p className="font-medium">
+                                    {Array.isArray(q.correctOption) ? q.correctOption.join(", ") : q.correctOption}
+                                  </p>
                                 </div>
                               </div>
-                              {q.type !== 'Paragraph' && (
-                                <span className={cn(
-                                  "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
-                                  isCorrect ? "bg-emerald-500/10 text-emerald-600" : "bg-error/10 text-error"
-                                )}>
-                                  {isCorrect ? "Correct" : "Incorrect"}
-                                </span>
+
+                              {q.type === 'Paragraph' && viewingSubmission.manualGrades?.[q.id] !== undefined && (
+                                <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                                  <Award className="w-4 h-4" />
+                                  Graded: {viewingSubmission.manualGrades[q.id] * 100}%
+                                </div>
                               )}
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Student's Answer</p>
-                                <p className={cn(
-                                  "font-medium leading-relaxed",
-                                  q.type === 'Paragraph' ? "whitespace-pre-wrap" : ""
-                                )}>
-                                  {Array.isArray(studentAnswer) ? studentAnswer.join(", ") : (studentAnswer || "No Answer")}
-                                </p>
-                              </div>
-                              <div className="p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-2">Correct Answer</p>
-                                <p className="font-medium">
-                                  {Array.isArray(q.correctOption) ? q.correctOption.join(", ") : q.correctOption}
-                                </p>
-                              </div>
-                            </div>
-
-                            {q.type === 'Paragraph' && viewingSubmission.manualGrades?.[q.id] !== undefined && (
-                              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                                <Award className="w-4 h-4" />
-                                Graded: {viewingSubmission.manualGrades[q.id] * 100}%
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        });
+                      })()}
                     </div>
                     
                     <div className="p-6 border-t border-outline-variant/10 bg-surface-container-low/30 flex justify-end">

@@ -55,6 +55,7 @@
         "questionOrder": { "type": "array", "items": { "type": "string" } },
         "optionOrders": { "type": "object", "description": "Map of question IDs to shuffled option labels." },
         "startTime": { "type": "integer" },
+        "score": { "type": "number", "description": "The student's score calculation." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["quizId", "studentId", "name", "roll", "progress", "status", "answers", "createdAt"]

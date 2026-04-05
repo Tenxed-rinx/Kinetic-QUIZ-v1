@@ -28,7 +28,7 @@ export default function TopAppBar({ variant = "standard", progress, currentTask,
         <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
           <Zap className="w-6 h-6" />
         </div>
-        <span className="font-headline font-black text-2xl tracking-tighter text-on-surface">KINETIC</span>
+        <span className="font-headline font-black text-2xl tracking-tighter text-on-surface uppercase">Kinetic Quiz</span>
       </div>
     );
 

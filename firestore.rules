@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: quizzes
+    // Fields:
+    //   - title: string (1-100)
+    //   - totalQuestions: int (>0)
+    //   - drawCount: int (>0, <= totalQuestions)
+    //   - roomCode: string
+    //   - authorId: string (UID)
+    //   - createdAt: timestamp
+    //   - isActive: bool
+    //
+    // Collection: quizzes/{quizId}/questions
+    // Fields:
+    //   - text: string
+    //   - type: string (Multiple Choice, True/False, Multiple Correct, Paragraph)
+    //   - timer: int
+    //   - options: map
+    //   - correctOption: string | list
+    //   - quizId: string
+    //
+    // Collection: quizzes/{quizId}/responses
+    // Fields:
+    //   - quizId: string
+    //   - studentId: string | null
+    //   - name: string
+    //   - roll: string
+    //   - progress: int
+    //   - status: string (Appearing, Submitted, Away)
+    //   - answers: map
+    //   - questionOrder: list
+    //   - optionOrders: map
+    //   - startTime: int
+    //   - lastSeen: int
+    //   - questionTimers: map (optional)
+    //   - timeTaken: int (optional)
+    //   - createdAt: timestamp
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "anujyounger66@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isQuizAuthor(quizId) {
+      return isAuthenticated() && get(/databases/$(database)/documents/quizzes/$(quizId)).data.authorId == request.auth.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidQuiz(data) {
+      return hasRequiredFields(['title', 'totalQuestions', 'drawCount', 'roomCode', 'authorId', 'createdAt', 'isActive']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.totalQuestions is int && data.totalQuestions > 0 &&
+             data.drawCount is int && data.drawCount > 0 && data.drawCount <= data.totalQuestions &&
+             data.roomCode is string &&
+             data.authorId == request.auth.uid &&
+             data.isActive is bool &&
+             (!('allowedRollPatterns' in data) || data.allowedRollPatterns is list) &&
+             (request.method == 'create' ? data.createdAt == request.time : data.createdAt == resource.data.createdAt);
+    }
+
+    function isValidQuestion(data, quizId) {
+      return hasRequiredFields(['text', 'type', 'timer', 'options', 'correctOption', 'quizId']) &&
+             data.text is string && data.text.size() > 0 &&
+             data.type in ['Multiple Choice', 'True/False', 'Multiple Correct', 'Paragraph'] &&
+             data.timer is int && data.timer > 0 &&
+             data.options is map &&
+             (data.correctOption is string || data.correctOption is list) &&
+             data.quizId == quizId;
+    }
+
+    function isValidResponse(data, quizId) {
+      return hasRequiredFields(['quizId', 'name', 'roll', 'progress', 'status', 'answers', 'createdAt', 'questionOrder', 'optionOrders', 'startTime', 'lastSeen']) &&
+             data.quizId == quizId &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.roll is string && data.roll.size() > 0 && data.roll.size() <= 50 &&
+             data.progress is int && data.progress >= 0 &&
+             data.status in ['Appearing', 'Submitted', 'Away'] &&
+             data.answers is map &&
+             data.questionOrder is list &&
+             data.optionOrders is map &&
+             data.startTime is int &&
+             data.lastSeen is int &&
+             (!('questionTimers' in data) || data.questionTimers is map) &&
+             (!('timeTaken' in data) || data.timeTaken is int) &&
+             (!('score' in data) || data.score is number) &&
+             (request.method == 'create' ? data.createdAt == request.time : data.createdAt == resource.data.createdAt);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /quizzes/{quizId} {
+      // Allow read for students joining via roomCode
+      allow read: if true; 
+      allow create: if isAuthenticated() && isValidQuiz(request.resource.data);
+      allow update: if (isQuizAuthor(quizId) || isAdmin()) && isValidQuiz(request.resource.data);
+      allow delete: if isQuizAuthor(quizId) || isAdmin();
+
+      match /questions/{questionId} {
+        allow read: if true; // Students need to read questions
+        allow create: if (isQuizAuthor(quizId) || isAdmin()) && isValidQuestion(request.resource.data, quizId);
+        allow update: if (isQuizAuthor(quizId) || isAdmin()) && isValidQuestion(request.resource.data, quizId);
+        allow delete: if isQuizAuthor(quizId) || isAdmin();
+      }
+
+      match /responses/{roll} {
+        // Allow anyone to check if their own roll number document exists
+        allow get: if true; 
+        
+        // Only teachers/admins can list all responses
+        allow list: if isQuizAuthor(quizId) || isAdmin();
+        
+        allow create: if isValidResponse(request.resource.data, quizId) && request.resource.id == request.resource.data.roll;
+        
+        allow update: if isQuizAuthor(quizId) || isAdmin() || 
+                       (resource.data.studentId != null && isOwner(resource.data.studentId)) ||
+                       (resource.data.studentId == null && request.resource.data.roll == resource.data.roll);
+        
+        allow delete: if isQuizAuthor(quizId) || isAdmin();
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+    }
+  }
+}

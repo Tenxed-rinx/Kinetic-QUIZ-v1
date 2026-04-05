@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lexend:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Lexend", ui-sans-serif, system-ui, sans-serif;
+  --font-label: "Lexend", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #004be2;
+  --color-primary-dim: #0041c7;
+  --color-primary-container: #809bff;
+  --color-secondary: #006a28;
+  --color-secondary-dim: #005d22;
+  --color-secondary-container: #5cfd80;
+  --color-tertiary: #7e5200;
+  --color-tertiary-dim: #6e4800;
+  --color-tertiary-container: #feaa00;
+  --color-error: #b41340;
+  --color-error-dim: #a70138;
+  --color-error-container: #f74b6d;
+  
+  --color-surface: #f8f5ff;
+  --color-surface-bright: #f8f5ff;
+  --color-surface-dim: #d1d0ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2efff;
+  --color-surface-container: #e8e6ff;
+  --color-surface-container-high: #e1e0ff;
+  --color-surface-container-highest: #dbd9ff;
+  
+  --color-on-surface: #2a2b51;
+  --color-on-surface-variant: #575881;
+  --color-outline: #72739e;
+  --color-outline-variant: #a9a9d7;
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-surface font-body text-on-surface;
+  }
+}
+
+.kinetic-gradient {
+  background: linear-gradient(135deg, #004be2 0%, #809bff 100%);
+}
+
+.glass-timer {
+  background: rgba(219, 217, 255, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+.tonal-lift {
+  box-shadow: 0 20px 40px rgba(42, 43, 81, 0.04);
+}

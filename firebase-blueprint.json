@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A quiz created by a teacher.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the quiz." },
+        "totalQuestions": { "type": "integer", "description": "Total number of questions in the quiz." },
+        "drawCount": { "type": "integer", "description": "Number of questions to draw for students." },
+        "roomCode": { "type": "string", "description": "Unique code for the quiz room." },
+        "authorId": { "type": "string", "description": "The UID of the teacher who created the quiz." },
+        "allowedRollPatterns": { 
+          "type": "array", 
+          "items": { "type": "string" },
+          "description": "Allowed roll number patterns, e.g., '2023-IMG-001-061'."
+        },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the quiz was created." },
+        "isActive": { "type": "boolean", "description": "Whether the quiz is currently active." }
+      },
+      "required": ["title", "totalQuestions", "drawCount", "roomCode", "authorId", "createdAt", "isActive"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "A single question within a quiz.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "The question text." },
+        "type": { "type": "string", "enum": ["Multiple Choice", "True/False", "Multiple Correct", "Paragraph"] },
+        "timer": { "type": "integer", "description": "Time limit in seconds." },
+        "options": {
+          "type": "object",
+          "description": "Map of option labels to text."
+        },
+        "correctOption": { 
+          "type": ["string", "array"], 
+          "description": "The correct answer(s). String for MCQ/TF, Array for MSQ, 'MANUAL_CHECK' for Paragraph." 
+        },
+        "quizId": { "type": "string", "description": "The ID of the quiz this question belongs to." }
+      },
+      "required": ["text", "type", "timer", "options", "correctOption", "quizId"]
+    },
+    "Participant": {
+      "title": "Participant",
+      "description": "A student participating in a quiz.",
+      "type": "object",
+      "properties": {
+        "quizId": { "type": "string", "description": "The ID of the quiz." },
+        "studentId": { "type": "string", "description": "The UID of the student." },
+        "name": { "type": "string", "description": "Student's name." },
+        "roll": { "type": "string", "description": "Student's roll number." },
+        "progress": { "type": "integer", "description": "Index of the current question." },
+        "status": { "type": "string", "enum": ["Appearing", "Submitted"] },
+        "answers": { "type": "object", "description": "Map of question IDs to student's answers." },
+        "questionOrder": { "type": "array", "items": { "type": "string" } },
+        "optionOrders": { "type": "object", "description": "Map of question IDs to shuffled option labels." },
+        "startTime": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["quizId", "studentId", "name", "roll", "progress", "status", "answers", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user profile for teachers or admins.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The UID of the user." },
+        "full_name": { "type": "string", "description": "User's full name." },
+        "avatar_url": { "type": "string", "description": "User's avatar URL." },
+        "bio": { "type": "string", "description": "User's bio." },
+        "department": { "type": "string", "description": "User's department." },
+        "role": { "type": "string", "enum": ["teacher", "admin"] },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "full_name", "role", "updated_at"]
+    }
+  },
+  "firestore": {
+    "/quizzes/{quizId}": {
+      "schema": "Quiz",
+      "description": "Collection of quizzes."
+    },
+    "/quizzes/{quizId}/questions/{questionId}": {
+      "schema": "Question",
+      "description": "Questions for a specific quiz."
+    },
+    "/quizzes/{quizId}/responses/{responseId}": {
+      "schema": "Participant",
+      "description": "Student responses and progress for a specific quiz."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles for teachers and admins."
+    }
+  }
+}

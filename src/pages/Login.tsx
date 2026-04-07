@@ -75,7 +75,7 @@ export default function Login() {
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <LogIn className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight mb-2">Teacher Login</h1>
+          <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight mb-2">Login</h1>
           <p className="text-on-surface-variant font-body">Sign in to manage your quizzes and reports.</p>
         </div>
 

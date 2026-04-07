@@ -21,6 +21,7 @@ export default function Reports() {
   const [gradingValues, setGradingValues] = useState<Record<string, number>>({});
   const [viewingSubmission, setViewingSubmission] = useState<Participant | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showQueriesOnly, setShowQueriesOnly] = useState(false);
   const { gradeParticipant } = useQuiz();
 
   useEffect(() => {
@@ -287,9 +288,21 @@ export default function Reports() {
             </header>
 
             <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-outline-variant/10">
+              <div className="p-6 border-b border-outline-variant/10 flex items-center justify-between"">
                 <h2 className="font-headline font-bold text-xl text-on-surface">Student Performance</h2>
-              </div>
+            <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setShowQueriesOnly(!showQueriesOnly)}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all",
+                      showQueriesOnly ? "bg-error text-white shadow-lg shadow-error/20" : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                    )}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    {showQueriesOnly ? "Showing Queries" : "Filter Queries"}
+                  </button>
+                </div>  
+            </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -305,6 +318,7 @@ export default function Reports() {
                   <tbody className="divide-y divide-outline-variant/10">
                     {allParticipants
                       .filter(p => p.quizId === selectedQuiz.id)
+                       .filter(p => !showQueriesOnly || (p.query && p.query.trim().length > 0))
                       .sort((a, b) => getParticipantPercentage(b, selectedQuiz) - getParticipantPercentage(a, selectedQuiz))
                       .map((p, index) => {
                         const score = getParticipantPercentage(p, selectedQuiz);
@@ -324,7 +338,14 @@ export default function Reports() {
                                 {index + 1}
                               </span>
                             </td>
-                            <td className="px-6 py-5 font-headline font-bold text-on-surface">{p.name}</td>
+                            <td className="px-6 py-5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-headline font-bold text-on-surface">{p.name}</span>
+                                {p.query && p.query.trim().length > 0 && (
+                                  <div className="w-2 h-2 rounded-full bg-error animate-pulse shadow-sm shadow-error/50" title="Student has a query"></div>
+                                )}
+                              </div>
+                            </td>
                             <td className="px-6 py-5 font-body text-on-surface-variant">{p.roll}</td>
                             <td className="px-6 py-5">
                               <span className="text-sm font-medium text-on-surface-variant">
@@ -403,6 +424,17 @@ export default function Reports() {
                     </div>
                     
                     <div className="flex-grow overflow-y-auto p-8 space-y-8">
+                       {viewingSubmission.query && (
+                        <div className="p-6 bg-error/5 border border-error/10 rounded-3xl space-y-3">
+                          <div className="flex items-center gap-2 text-error">
+                            <MessageSquare className="w-5 h-5" />
+                            <h4 className="font-headline font-bold">Student Query</h4>
+                          </div>
+                          <p className="text-on-surface font-body leading-relaxed italic">
+                            "{viewingSubmission.query}"
+                          </p>
+                        </div>
+                      )}
                       {(() => {
                         const allQuestions = quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions;
                         const relevantQuestionIds = viewingSubmission.questionOrder || allQuestions.map(q => q.id);

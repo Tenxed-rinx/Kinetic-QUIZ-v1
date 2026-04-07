@@ -7,9 +7,14 @@ import { cn } from '@/src/lib/utils';
 import TopAppBar from '@/src/components/TopAppBar';
 
 export default function StudentScore() {
-  const { quiz, currentStudentRoll, participants, resetQuiz } = useQuiz();
+  const { quiz, currentStudentRoll, participants, resetQuiz,updateParticipant } = useQuiz();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [isQuerying, setIsQuerying] = useState(false);
+  const [queryText, setQueryText] = useState("");
+  const [querySubmitting, setQuerySubmitting] = useState(false);
+  const [querySubmitted, setQuerySubmitted] = useState(false);
+
 
   const participant = participants.find(p => p.roll === currentStudentRoll);
   
@@ -50,11 +55,7 @@ export default function StudentScore() {
     return `${mins}m ${secs}s`;
   };
 
-    const [isQuerying, setIsQuerying] = useState(false);
-  const [queryText, setQueryText] = useState("");
-  const [querySubmitting, setQuerySubmitting] = useState(false);
-  const [querySubmitted, setQuerySubmitted] = useState(false);
-  const { updateParticipant } = useQuiz();
+    
 
   const handleQuerySubmit = async () => {
     if (!queryText.trim() || !currentStudentRoll) return;

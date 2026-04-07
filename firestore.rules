@@ -111,6 +111,7 @@ service cloud.firestore {
              (!('questionTimers' in data) || data.questionTimers is map) &&
              (!('timeTaken' in data) || data.timeTaken is int) &&
              (!('score' in data) || data.score is number) &&
+(!('query' in data) || (data.query is string && data.query.size() <= 1000)) &&
              (request.method == 'create' ? data.createdAt == request.time : data.createdAt == resource.data.createdAt);
     }
 

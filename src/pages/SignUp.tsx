@@ -55,8 +55,8 @@ export default function SignUp() {
           <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <UserPlus className="w-8 h-8 text-primary" />
           </div>
-          <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight mb-2">Teacher Sign Up</h1>
-          <p className="text-on-surface-variant font-body">Create your educator account to start building quizzes.</p>
+          <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight mb-2">Sign Up</h1>
+          <p className="text-on-surface-variant font-body">Create your account to start building quizzes.</p>
         </div>
 
         <form onSubmit={handleSignUp} className="space-y-5">

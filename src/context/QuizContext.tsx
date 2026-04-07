@@ -41,26 +41,25 @@ export interface Quiz {
 }
 
 export interface Participant {
-  id: string;
-  quizId?: string;
+  id?: string;
+  quizId: string;
   studentId?: string | null;
   name: string;
   roll: string;
   progress: number;
-  questionTimers?: Record<string, number>;
   status: 'Appearing' | 'Submitted' | 'Away';
-  answers: Record<string, string>;
-  manualGrades?: Record<string, number>; // Map of question ID to points (0 to 1)
+  answers: Record<string, any>;
   questionOrder?: string[];
   optionOrders?: Record<string, string[]>;
-  startTime?: number;
-  lastSeen?: number;
+  startTime: number;
+  lastSeen: number;
+  questionTimers?: Record<string, number>;
+  manualGrades?: Record<string, number>;
   timeTaken?: number;
   score?: number;
-  query?: string;
+  query?: string; // <--- Make sure this line is added!
   createdAt?: any;
 }
-
 interface QuizContextType {
   quiz: Quiz | null;
   quizzes: Quiz[];

@@ -57,6 +57,7 @@ export interface Participant {
   lastSeen?: number;
   timeTaken?: number;
   score?: number;
+  query?: string;
   createdAt?: any;
 }
 

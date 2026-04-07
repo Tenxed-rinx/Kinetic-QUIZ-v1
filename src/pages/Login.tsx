@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mail, Lock, LogIn, Chrome, ArrowRight, Loader2, Eye, EyeOff, Shield, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, LogIn, Chrome, ArrowRight, Loader2, Eye, EyeOff, Shield, CheckCircle2,User } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 export default function Login() {
@@ -72,9 +72,9 @@ export default function Login() {
         className="w-full max-w-md bg-surface-container-lowest p-10 rounded-3xl border border-outline-variant/15 shadow-xl relative z-10"
       >
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <LogIn className="w-8 h-8 text-primary" />
-          </div>
+         <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+  <User className="w-8 h-8 text-primary" />
+</div>
           <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight mb-2">Login</h1>
           <p className="text-on-surface-variant font-body">Sign in to manage your quizzes and reports.</p>
         </div>

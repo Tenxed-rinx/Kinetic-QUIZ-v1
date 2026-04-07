@@ -50,6 +50,26 @@ export default function StudentScore() {
     return `${mins}m ${secs}s`;
   };
 
+    const [isQuerying, setIsQuerying] = useState(false);
+  const [queryText, setQueryText] = useState("");
+  const [querySubmitting, setQuerySubmitting] = useState(false);
+  const [querySubmitted, setQuerySubmitted] = useState(false);
+  const { updateParticipant } = useQuiz();
+
+  const handleQuerySubmit = async () => {
+    if (!queryText.trim() || !currentStudentRoll) return;
+    setQuerySubmitting(true);
+    try {
+      await updateParticipant(currentStudentRoll, { query: queryText.trim() });
+      setQuerySubmitted(true);
+      setIsQuerying(false);
+    } catch (err) {
+      console.error("Failed to submit query:", err);
+    } finally {
+      setQuerySubmitting(false);
+    }
+  };
+  
   const handleExit = () => {
     resetQuiz();
     navigate('/join');
@@ -135,17 +155,60 @@ export default function StudentScore() {
 
           {/* Actions */}
           <div className="space-y-4 pt-8">
+             {!querySubmitted ? (
+              <>
+                {!isQuerying ? (
             <button
-              onClick={() => {
-                // Placeholder for query feature
-                alert("You can ask your teacher queries directly in the classroom.");
-              }}
+              onClick={() => setIsQuerying(true)}
               className="w-full py-4 px-6 rounded-2xl bg-surface-container-high text-on-surface font-headline font-bold flex items-center justify-center gap-3 hover:bg-surface-container-highest transition-colors"
             >
               <MessageSquare className="w-5 h-5" />
               Ask Query to Teacher
             </button>
-            
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="space-y-4 bg-surface-container-low p-6 rounded-3xl border border-outline-variant/10"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <MessageSquare className="w-5 h-5 text-primary" />
+                      <h4 className="font-headline font-bold text-on-surface">Submit a Query</h4>
+                    </div>
+                    <textarea 
+                      value={queryText}
+                      onChange={(e) => setQueryText(e.target.value)}
+                      placeholder="Write your query here... (e.g., 'I think Q4 had a mistake')"
+                      className="w-full h-32 p-4 bg-surface-container-lowest border border-outline-variant/20 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none text-sm font-body"
+                    />
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => setIsQuerying(false)}
+                        className="flex-1 py-3 bg-surface-container-high text-on-surface font-bold rounded-xl hover:bg-surface-container-highest transition-colors"
+                      >
+                        Cancel
+             </button>
+                      <button 
+                        onClick={handleQuerySubmit}
+                        disabled={querySubmitting || !queryText.trim()}
+                        className="flex-[2] py-3 bg-primary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {querySubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit Query"}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center gap-3 text-emerald-700 font-bold"
+              >
+                <CheckCircle2 className="w-5 h-5" />
+                Query submitted to teacher successfully!
+              </motion.div>
+            )}
             <button
               onClick={handleExit}
               className="w-full py-4 px-6 rounded-2xl bg-primary text-on-primary font-headline font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"

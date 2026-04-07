@@ -142,8 +142,8 @@ service cloud.firestore {
         
         allow create: if isValidResponse(request.resource.data, quizId) && request.resource.id == request.resource.data.roll;
         
-        allow update: if isQuizAuthor(quizId) || isAdmin() || 
-                       (resource.data.studentId != null && isOwner(resource.data.studentId)) ||
+         allow update: if (isAuthenticated() && (isQuizAuthor(quizId) || isAdmin() || 
+                       (resource.data.studentId != null && isOwner(resource.data.studentId)))) ||
                        (resource.data.studentId == null && request.resource.data.roll == resource.data.roll);
         
         allow delete: if isQuizAuthor(quizId) || isAdmin();

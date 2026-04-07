@@ -288,7 +288,7 @@ export default function Reports() {
             </header>
 
             <div className="bg-surface-container-lowest rounded-3xl border border-outline-variant/10 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-outline-variant/10 flex items-center justify-between"">
+              <div className="p-6 border-b border-outline-variant/10 flex items-center justify-between">
                 <h2 className="font-headline font-bold text-xl text-on-surface">Student Performance</h2>
             <div className="flex items-center gap-2">
                   <button 

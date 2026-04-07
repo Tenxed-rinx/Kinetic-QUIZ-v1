@@ -73,8 +73,8 @@ export default function Login() {
       >
         <div className="text-center mb-10">
          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-  <User className="w-8 h-8 text-primary" />
-</div>
+          <User className="w-8 h-8 text-primary" />
+          </div>
           <h1 className="font-headline text-3xl font-extrabold text-on-surface tracking-tight mb-2">Login</h1>
           <p className="text-on-surface-variant font-body">Sign in to manage your quizzes and reports.</p>
         </div>

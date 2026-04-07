@@ -92,24 +92,25 @@ service cloud.firestore {
              data.quizId == quizId;
     }
 
-    function isValidResponse(data, quizId) {
-      return hasRequiredFields(['quizId', 'name', 'roll', 'progress', 'status', 'answers', 'createdAt', 'questionOrder', 'optionOrders', 'startTime', 'lastSeen']) &&
-             data.quizId == quizId &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.roll is string && data.roll.size() > 0 && data.roll.size() <= 50 &&
-             data.progress is int && data.progress >= 0 &&
-             data.status in ['Appearing', 'Submitted', 'Away'] &&
-             data.answers is map &&
-             data.questionOrder is list &&
-             data.optionOrders is map &&
-             data.startTime is int &&
-             data.lastSeen is int &&
-             (!('questionTimers' in data) || data.questionTimers is map) &&
-             (!('timeTaken' in data) || data.timeTaken is int) &&
-             (!('score' in data) || data.score is number) &&
-             (!('query' in data) || (data.query is string && data.query.size() <= 1000)) &&
-             (request.method == 'create' ? data.createdAt == request.time : data.createdAt == resource.data.createdAt);
-    }
+function isValidResponse(data, quizId) {
+  return hasRequiredFields(['quizId', 'name', 'roll', 'progress', 'status', 'answers', 'createdAt', 'questionOrder', 'optionOrders', 'startTime', 'lastSeen']) &&
+         data.quizId == quizId &&
+         data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+         data.roll is string && data.roll.size() > 0 && data.roll.size() <= 50 &&
+         data.progress is int && data.progress >= 0 &&
+         data.status in ['Appearing', 'Submitted', 'Away'] &&
+         data.answers is map &&
+         data.questionOrder is list &&
+         data.optionOrders is map &&
+         data.startTime is int &&
+         data.lastSeen is int &&
+         (!('questionTimers' in data) || data.questionTimers is map) &&
+         (!('questionExpiries' in data) || data.questionExpiries is map) &&
+         (!('timeTaken' in data) || data.timeTaken is int) &&
+         (!('score' in data) || data.score is number) &&
+         (!('query' in data) || (data.query is string && data.query.size() <= 1000)) &&
+         (request.method == 'create' ? data.createdAt == request.time : data.createdAt == resource.data.createdAt);
+}
 
     match /quizzes/{quizId} {
       allow read: if true; 

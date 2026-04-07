@@ -7,7 +7,7 @@ import { cn } from '@/src/lib/utils';
 import TopAppBar from '@/src/components/TopAppBar';
 
 export default function StudentScore() {
-  const { quiz, currentStudentRoll, participants, resetQuiz,updateParticipant } = useQuiz();
+  const { quiz, currentStudentRoll, participants, resetQuiz, updateParticipant } = useQuiz();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [isQuerying, setIsQuerying] = useState(false);
@@ -15,11 +15,9 @@ export default function StudentScore() {
   const [querySubmitting, setQuerySubmitting] = useState(false);
   const [querySubmitted, setQuerySubmitted] = useState(false);
 
-
   const participant = participants.find(p => p.roll === currentStudentRoll);
   
   useEffect(() => {
-    // If no quiz or no student roll, redirect to join
     if (!currentStudentRoll || !quiz) {
       const timer = setTimeout(() => {
         navigate('/join');
@@ -55,8 +53,6 @@ export default function StudentScore() {
     return `${mins}m ${secs}s`;
   };
 
-    
-
   const handleQuerySubmit = async () => {
     if (!queryText.trim() || !currentStudentRoll) return;
     setQuerySubmitting(true);
@@ -70,7 +66,7 @@ export default function StudentScore() {
       setQuerySubmitting(false);
     }
   };
-  
+
   const handleExit = () => {
     resetQuiz();
     navigate('/join');
@@ -86,7 +82,6 @@ export default function StudentScore() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full space-y-8"
         >
-          {/* Success Header */}
           <div className="text-center space-y-4">
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
@@ -99,20 +94,17 @@ export default function StudentScore() {
             </p>
           </div>
 
-          {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Your Score */}
             <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 text-center space-y-2 shadow-sm">
               <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Trophy className="w-5 h-5 text-primary" />
               </div>
               <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Your Score</p>
               <p className="text-3xl font-headline font-black text-primary">
-                {truncateScore(participant.score ?? 0)}<span className="text-lg text-on-surface-variant/50 ml-1">/{participant.questionOrder?.length || totalScorable}</span>
+                {truncateScore(participant.score ?? 0)}<span className="text-lg text-on-surface-variant/50 ml-1">/{totalScorable}</span>
               </p>
             </div>
 
-            {/* Time Taken */}
             <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 text-center space-y-2 shadow-sm">
               <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Clock className="w-5 h-5 text-secondary" />
@@ -123,7 +115,6 @@ export default function StudentScore() {
               </p>
             </div>
 
-            {/* Topper Marks */}
             <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 text-center space-y-2 shadow-sm">
               <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Trophy className="w-5 h-5 text-amber-600" />
@@ -135,7 +126,6 @@ export default function StudentScore() {
             </div>
           </div>
 
-          {/* Paragraph Warning */}
           {hasParagraphs && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
@@ -154,18 +144,17 @@ export default function StudentScore() {
             </motion.div>
           )}
 
-          {/* Actions */}
           <div className="space-y-4 pt-8">
-             {!querySubmitted ? (
+            {!querySubmitted ? (
               <>
                 {!isQuerying ? (
-            <button
-              onClick={() => setIsQuerying(true)}
-              className="w-full py-4 px-6 rounded-2xl bg-surface-container-high text-on-surface font-headline font-bold flex items-center justify-center gap-3 hover:bg-surface-container-highest transition-colors"
-            >
-              <MessageSquare className="w-5 h-5" />
-              Ask Query to Teacher
-            </button>
+                  <button
+                    onClick={() => setIsQuerying(true)}
+                    className="w-full py-4 px-6 rounded-2xl bg-surface-container-high text-on-surface font-headline font-bold flex items-center justify-center gap-3 hover:bg-surface-container-highest transition-colors"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    Ask Query to Teacher
+                  </button>
                 ) : (
                   <motion.div 
                     initial={{ opacity: 0, height: 0 }}
@@ -188,7 +177,7 @@ export default function StudentScore() {
                         className="flex-1 py-3 bg-surface-container-high text-on-surface font-bold rounded-xl hover:bg-surface-container-highest transition-colors"
                       >
                         Cancel
-             </button>
+                      </button>
                       <button 
                         onClick={handleQuerySubmit}
                         disabled={querySubmitting || !queryText.trim()}
@@ -210,6 +199,7 @@ export default function StudentScore() {
                 Query submitted to teacher successfully!
               </motion.div>
             )}
+            
             <button
               onClick={handleExit}
               className="w-full py-4 px-6 rounded-2xl bg-primary text-on-primary font-headline font-bold flex items-center justify-center gap-3 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"

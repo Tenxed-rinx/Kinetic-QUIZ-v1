@@ -154,13 +154,9 @@ export default function Reports() {
         } else if (q.type === 'Paragraph') {
           responses[key] = answer;
         } else if (Array.isArray(answer)) {
-          responses[key] = answer.map(label => {
-            const optionText = q.options?.[label] || label;
-            return `${label}: ${optionText}`;
-          }).join(", ");
+          responses[key] = answer.map(label => `${label}: ${q.options[label] || label}`).join(", ");
         } else {
-          const optionText = q.options?.[answer] || answer;
-          responses[key] = `${answer}: ${optionText}`;
+          responses[key] = `${answer}: ${q.options[answer] || answer}`;
         }
       });
       
@@ -360,15 +356,10 @@ export default function Reports() {
                                     score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-error"
                                   )} style={{ width: `${score}%` }}></div>
                                 </div>
-                                <div className="flex flex-col">
-                                  <span className={cn(
-                                    "font-headline font-black leading-none",
-                                    score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-error"
-                                  )}>{score}%</span>
-                                  <span className="text-[10px] text-on-surface-variant font-bold">
-                                    {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions)}/{selectedQuiz.totalQuestions}
-                                  </span>
-                                </div>
+                                <span className={cn(
+                                  "font-headline font-black",
+                                  score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-error"
+                                )}>{score}%</span>
                               </div>
                             </td>
                             <td className="px-6 py-5">
@@ -483,8 +474,8 @@ export default function Reports() {
                                   {q.type === 'Paragraph' 
                                     ? (studentAnswer || "No Answer")
                                     : Array.isArray(studentAnswer) 
-                                      ? studentAnswer.map(label => `${label}: ${q.options?.[label] || label}`).join(", ") 
-                                      : studentAnswer ? `${studentAnswer}: ${q.options?.[studentAnswer] || studentAnswer}` : "No Answer"
+                                      ? studentAnswer.map(label => `${label}: ${q.options[label] || label}`).join(", ") 
+                                      : studentAnswer ? `${studentAnswer}: ${q.options[studentAnswer] || studentAnswer}` : "No Answer"
                                   }
                                 </p>
                               </div>
@@ -494,8 +485,8 @@ export default function Reports() {
                                   {q.type === 'Paragraph'
                                     ? "Manual Grading Required"
                                     : Array.isArray(q.correctOption) 
-                                      ? q.correctOption.map(label => `${label}: ${q.options?.[label] || label}`).join(", ") 
-                                      : `${q.correctOption}: ${q.options?.[q.correctOption] || q.correctOption}`
+                                      ? q.correctOption.map(label => `${label}: ${q.options[label] || label}`).join(", ") 
+                                      : `${q.correctOption}: ${q.options[q.correctOption] || q.correctOption}`
                                   }
                                 </p>
                               </div>
@@ -794,6 +785,17 @@ export default function Reports() {
                   onClick={() => handleDeleteQuiz(showDeleteConfirm)}
                   className="flex-1 py-4 bg-error text-on-error font-headline font-bold rounded-xl shadow-lg shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all"
                 >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
                   Delete
                 </button>
               </div>

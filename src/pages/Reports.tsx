@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useQuiz, Participant, Quiz, Question } from "@/src/context/QuizContext";
 import { cn } from "@/src/lib/utils";
 import { useState, useEffect, useMemo } from "react";
-import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 

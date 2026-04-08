@@ -50,7 +50,7 @@ export interface Participant {
   questionTimers?: Record<string, number>;
   questionExpiries?: Record<string, number>; // Add this
   status: 'Appearing' | 'Submitted' | 'Away';
-  answers: Record<string, string>;
+ answers: Record<string, any>;
   manualGrades?: Record<string, number>;
   questionOrder?: string[];
   optionOrders?: Record<string, string[]>;

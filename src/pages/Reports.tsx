@@ -149,14 +149,26 @@ export default function Reports() {
       questions.forEach((q, idx) => {
         const key = `Q${idx + 1}: ${q.text}`;
         const answer = p.answers[q.id];
+        const optionOrder = p.optionOrders?.[q.id] || ['A', 'B', 'C', 'D'];
+        const getVisualLabel = (label: string) => {
+          const vIdx = optionOrder.indexOf(label);
+          return vIdx !== -1 ? String.fromCharCode(65 + vIdx) : label;
+        };
+
         if (!answer) {
           responses[key] = "No Answer";
         } else if (q.type === 'Paragraph') {
           responses[key] = answer;
         } else if (Array.isArray(answer)) {
-          responses[key] = answer.map(label => `${label}: ${q.options[label] || label}`).join(", ");
+          responses[key] = answer.map(label => {
+            const visual = getVisualLabel(label);
+            const optionText = q.options?.[label] || label;
+            return `${visual}: ${optionText}`;
+          }).join(", ");
         } else {
-          responses[key] = `${answer}: ${q.options[answer] || answer}`;
+          const visual = getVisualLabel(answer);
+          const optionText = q.options?.[answer] || answer;
+          responses[key] = `${visual}: ${optionText}`;
         }
       });
       
@@ -356,10 +368,15 @@ export default function Reports() {
                                     score >= 80 ? "bg-emerald-500" : score >= 50 ? "bg-amber-500" : "bg-error"
                                   )} style={{ width: `${score}%` }}></div>
                                 </div>
-                                <span className={cn(
-                                  "font-headline font-black",
-                                  score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-error"
-                                )}>{score}%</span>
+                                <div className="flex flex-col">
+                                  <span className={cn(
+                                    "font-headline font-black leading-none",
+                                    score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-error"
+                                  )}>{score}%</span>
+                                  <span className="text-[10px] text-on-surface-variant font-bold">
+                                    {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions)}/{selectedQuiz.totalQuestions}
+                                  </span>
+                                </div>
                               </div>
                             </td>
                             <td className="px-6 py-5">
@@ -434,6 +451,12 @@ export default function Reports() {
 
                       {(quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions).map((q, idx) => {
                         const studentAnswer = viewingSubmission.answers[q.id];
+                        const optionOrder = viewingSubmission.optionOrders?.[q.id] || ['A', 'B', 'C', 'D'];
+                        const getVisualLabel = (label: string) => {
+                          const vIdx = optionOrder.indexOf(label);
+                          return vIdx !== -1 ? String.fromCharCode(65 + vIdx) : label;
+                        };
+
                         const isCorrect = q.type === 'Paragraph' ? null : (
                           q.type === 'Multiple Correct' || q.type === 'MSQ'
                             ? (Array.isArray(studentAnswer) && Array.isArray(q.correctOption) && 
@@ -474,8 +497,8 @@ export default function Reports() {
                                   {q.type === 'Paragraph' 
                                     ? (studentAnswer || "No Answer")
                                     : Array.isArray(studentAnswer) 
-                                      ? studentAnswer.map(label => `${label}: ${q.options[label] || label}`).join(", ") 
-                                      : studentAnswer ? `${studentAnswer}: ${q.options[studentAnswer] || studentAnswer}` : "No Answer"
+                                      ? studentAnswer.map(label => `${getVisualLabel(label)}: ${q.options?.[label] || label}`).join(", ") 
+                                      : studentAnswer ? `${getVisualLabel(studentAnswer)}: ${q.options?.[studentAnswer] || studentAnswer}` : "No Answer"
                                   }
                                 </p>
                               </div>
@@ -485,8 +508,8 @@ export default function Reports() {
                                   {q.type === 'Paragraph'
                                     ? "Manual Grading Required"
                                     : Array.isArray(q.correctOption) 
-                                      ? q.correctOption.map(label => `${label}: ${q.options[label] || label}`).join(", ") 
-                                      : `${q.correctOption}: ${q.options[q.correctOption] || q.correctOption}`
+                                      ? q.correctOption.map(label => `${getVisualLabel(label)}: ${q.options?.[label] || label}`).join(", ") 
+                                      : `${getVisualLabel(q.correctOption)}: ${q.options?.[q.correctOption] || q.correctOption}`
                                   }
                                 </p>
                               </div>
@@ -785,17 +808,6 @@ export default function Reports() {
                   onClick={() => handleDeleteQuiz(showDeleteConfirm)}
                   className="flex-1 py-4 bg-error text-on-error font-headline font-bold rounded-xl shadow-lg shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all"
                 >
-                  Delete
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
                   Delete
                 </button>
               </div>

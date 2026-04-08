@@ -1,6 +1,6 @@
 import TopAppBar from "@/src/components/TopAppBar";
 import BottomNavBar from "@/src/components/BottomNavBar";
-import { Edit3, Info, Lightbulb, ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Info, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect } from "react";
 import { useQuiz } from "@/src/context/QuizContext";

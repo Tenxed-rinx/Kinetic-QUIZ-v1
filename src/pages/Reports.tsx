@@ -73,8 +73,7 @@ export default function Reports() {
     if (questions.length === 0) return 0;
     
     const rawScore = getRawScore(participant, quiz, questions);
-    const totalForStudent = participant.questionOrder?.length || quiz.totalQuestions || questions.length;
-    return Math.round((rawScore / totalForStudent) * 100);
+    return Math.round((rawScore / questions.length) * 100);
   };
 
   const stats = useMemo(() => {
@@ -176,7 +175,7 @@ export default function Reports() {
       return {
         Name: p.name,
         RollNumber: p.roll,
-        MarksScored: `${rawScore}/${p.questionOrder?.length || questions.length}`,
+        MarksScored: `${rawScore}/${questions.length}`,
         Status: p.status,
         TimeTaken: p.timeTaken ? `${p.timeTaken}s` : 'N/A',
         Responses: responses
@@ -375,7 +374,7 @@ export default function Reports() {
                                     score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-error"
                                   )}>{score}%</span>
                                   <span className="text-[10px] text-on-surface-variant font-bold">
-                                    {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions)}/{p.questionOrder?.length || selectedQuiz.totalQuestions}
+                                    {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions)}/{selectedQuiz.totalQuestions}
                                   </span>
                                 </div>
                               </div>

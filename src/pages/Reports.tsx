@@ -77,25 +77,78 @@ export default function Reports() {
     return Math.round((rawScore / denominator) * 100);
   };
 
-  const stats = useMemo(() => {
-    const totalParticipants = allParticipants.length;
+  const getQuizStats = (quiz: Quiz) => {
+    const participants = allParticipants.filter(p => p.quizId === quiz.id);
+    const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
+    const denominator = quiz.drawCount || questions.length;
     
-    let totalScore = 0;
-    let scoredParticipants = 0;
+    let totalMarksObtained = 0;
+    let totalMaxMarksPossible = 0;
+    let maxRawScore = 0;
+    const hasParticipants = participants.length > 0;
+    let minRawScore = hasParticipants ? denominator : 0;
 
-    allParticipants.forEach(p => {
-      const quiz = quizzes.find(q => q.id === p.quizId);
-      if (quiz && p.status === 'Submitted') {
-        totalScore += getParticipantPercentage(p, quiz);
-        scoredParticipants++;
-      }
+    participants.forEach(p => {
+      const pQuestions = p.questionOrder?.length || denominator;
+      const rawScore = getRawScore(p, quiz, questions);
+      
+      totalMarksObtained += rawScore;
+      totalMaxMarksPossible += pQuestions;
+      
+      if (rawScore > maxRawScore) maxRawScore = rawScore;
+      if (rawScore < minRawScore) minRawScore = rawScore;
     });
 
-    const avgScore = scoredParticipants > 0 ? Math.round(totalScore / scoredParticipants) : 0;
+    const totalParticipants = participants.length;
+    const avgFinalScore = totalMaxMarksPossible > 0 ? (totalMarksObtained / totalMaxMarksPossible) : 0;
+    const avgPercentage = Math.round(avgFinalScore * 100);
+    const avgRawScore = Number(avgFinalScore.toFixed(4));
+    
+    return {
+      count: totalParticipants,
+      avgRawScore,
+      avgPercentage,
+      maxRawScore,
+      minRawScore: hasParticipants ? minRawScore : 0,
+      totalQuestions: denominator,
+      totalPossibleAcrossStudents: totalMaxMarksPossible,
+      date: quiz.createdAt ? (quiz.createdAt.toDate ? quiz.createdAt.toDate().toLocaleDateString() : new Date(quiz.createdAt).toLocaleDateString()) : 'N/A'
+    };
+  };
+
+  const stats = useMemo(() => {
+    const totalParticipantsCount = allParticipants.length;
+    
+    // Aggregate calculation across all submissions
+    let totalMarksOverall = 0;
+    let totalPossibleOverall = 0;
+
+    quizzes.forEach(quiz => {
+      const participants = allParticipants.filter(p => p.quizId === quiz.id);
+      const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
+      const denominator = quiz.drawCount || questions.length;
+      
+      participants.forEach(p => {
+        const pQuestions = p.questionOrder?.length || denominator;
+        const rawScore = getRawScore(p, quiz, questions);
+        totalMarksOverall += rawScore;
+        totalPossibleOverall += pQuestions;
+      });
+    });
+
+    const avgScore = totalPossibleOverall > 0 ? Math.round((totalMarksOverall / totalPossibleOverall) * 100) : 0;
+    
+    // Log step-by-step for global analytics
+    if (quizzes.length > 0) {
+      console.log("Global Reports Analytics (Corrected):");
+      console.log("Total Marks Overall:", totalMarksOverall);
+      console.log("Total Possible Overall:", totalPossibleOverall);
+      console.log("Final Overall Average:", avgScore + "%");
+    }
     
     return {
       totalQuizzes: quizzes.length,
-      totalParticipants,
+      totalParticipants: totalParticipantsCount,
       avgScore: `${avgScore}%`,
       avgTime: "N/A"
     };
@@ -104,37 +157,6 @@ export default function Reports() {
   const filteredQuizzes = useMemo(() => {
     return quizzes.filter(q => q.title.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [quizzes, searchQuery]);
-
-  const getQuizStats = (quiz: Quiz) => {
-    const participants = allParticipants.filter(p => p.quizId === quiz.id);
-    const submitted = participants.filter(p => p.status === 'Submitted');
-    const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
-    
-    let totalRawScore = 0;
-    let maxRawScore = 0;
-    let minRawScore = submitted.length > 0 ? questions.length : 0;
-
-    submitted.forEach(p => {
-      const rawScore = getRawScore(p, quiz, questions);
-      totalRawScore += rawScore;
-      if (rawScore > maxRawScore) maxRawScore = rawScore;
-      if (rawScore < minRawScore) minRawScore = rawScore;
-    });
-
-    const avgRawScore = submitted.length > 0 ? Math.round((totalRawScore / submitted.length) * 100) / 100 : 0;
-    const denominator = quiz.drawCount || questions.length;
-    const avgPercentage = denominator > 0 ? Math.round((avgRawScore / denominator) * 100) : 0;
-    
-    return {
-      count: participants.length,
-      avgRawScore,
-      avgPercentage,
-      maxRawScore,
-      minRawScore: submitted.length > 0 ? minRawScore : 0,
-      totalQuestions: denominator,
-      date: quiz.createdAt ? (quiz.createdAt.toDate ? quiz.createdAt.toDate().toLocaleDateString() : new Date(quiz.createdAt).toLocaleDateString()) : 'N/A'
-    };
-  };
 
   const handleExportData = (quiz: Quiz) => {
     const quizId = quiz.id;
@@ -203,7 +225,7 @@ export default function Reports() {
       TotalStudentsAttended: stats.count,
       TopperMarks: `${stats.maxRawScore}/${denominator}`,
       LowestMarks: `${stats.minRawScore}/${denominator}`,
-      AverageScore: `${stats.avgRawScore}/${denominator}`,
+      AverageScore: `${stats.avgRawScore} (${stats.avgPercentage}%)`,
       Questions: questions.map((q, idx) => ({
         Number: idx + 1,
         Text: q.text,
@@ -287,8 +309,8 @@ export default function Reports() {
                 <div className="text-right">
                   <p className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant mb-1">Average Score</p>
                     <p className="text-3xl font-headline font-black text-primary">
-                      {getQuizStats(selectedQuiz).avgRawScore}
-                      <span className="text-sm text-on-surface-variant/50 ml-1">/{getQuizStats(selectedQuiz).totalQuestions}</span>
+                      {getQuizStats(selectedQuiz).avgRawScore.toFixed(2)}
+                      <span className="text-sm text-on-surface-variant/50 ml-1">({getQuizStats(selectedQuiz).avgPercentage}%)</span>
                     </p>
                 </div>
                 <div className="w-px h-12 bg-outline-variant/30 mx-2"></div>
@@ -388,11 +410,11 @@ export default function Reports() {
                               <div className="flex items-center gap-2">
                                 <span className={cn(
                                   "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
-                                  p.status === 'Submitted' ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"
+                                  (p.status === 'Submitted' || (p.cheatStrikes && p.cheatStrikes >= 2)) ? "bg-emerald-500/10 text-emerald-600" : "bg-primary/10 text-primary"
                                 )}>
-                                  {p.status}
+                                  {(p.status === 'Submitted' || (p.cheatStrikes && p.cheatStrikes >= 2)) ? "Submitted" : p.status}
                                 </span>
-                                {selectedQuiz.questions?.some(q => q.type === 'Paragraph') && p.status === 'Submitted' && (
+                                {selectedQuiz.questions?.some(q => q.type === 'Paragraph') && (p.status === 'Submitted' || (p.cheatStrikes && p.cheatStrikes >= 2)) && (
                                   <button 
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -656,11 +678,10 @@ export default function Reports() {
         </header>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {[
             { label: "Total Quizzes", value: stats.totalQuizzes, icon: ClipboardList, color: "bg-blue-500" },
             { label: "Total Participants", value: stats.totalParticipants.toLocaleString(), icon: Users, color: "bg-purple-500" },
-            { label: "Avg. Score", value: stats.avgScore, icon: Award, color: "bg-amber-500" },
             { label: "Avg. Time", value: stats.avgTime, icon: Clock, color: "bg-emerald-500" },
           ].map((stat, i) => (
             <motion.div 
@@ -729,7 +750,7 @@ export default function Reports() {
                           <div className="h-full bg-primary rounded-full" style={{ width: `${qStats.avgPercentage}%` }}></div>
                         </div>
                         <span className="text-xs font-label font-bold text-primary mt-1 block">
-                          {qStats.avgRawScore}/{qStats.totalQuestions}
+                          Avg: {qStats.avgPercentage}%
                         </span>
                       </td>
                       <td className="px-6 py-5">

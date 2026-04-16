@@ -151,7 +151,7 @@ export default function Profile() {
   const teacherInfo = {
     name: profile.fullName,
     email: user.email,
-    role: profile.role || "Educator",
+    role: profile.role === 'teacher' ? 'Teacher' : profile.role === 'student' ? 'Student' : profile.role || "Educator",
     department: profile.department,
     joinedDate: user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A',
     quizzesCreated: quizzes.length,
@@ -305,12 +305,11 @@ export default function Profile() {
             </header>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
               {[
-                { label: "Quizzes Created", value: teacherInfo.quizzesCreated, icon: BookOpen, color: "text-blue-500", hide: teacherInfo.role === 'Student' },
-                { label: "Students Taught", value: teacherInfo.studentsTaught, icon: User, color: "text-purple-500", hide: teacherInfo.role === 'Student' },
-                { label: "Quizzes Joined", value: teacherInfo.studentsTaught, icon: Radio, color: "text-blue-500", hide: teacherInfo.role !== 'Student' },
-                { label: "Avg. Accuracy", value: `${stats.avgAccuracy}%`, icon: Award, color: "text-amber-500" },
+                { label: "Quizzes Created", value: teacherInfo.quizzesCreated, icon: BookOpen, color: "text-blue-500", hide: profile.role === 'student' },
+                { label: "Students Taught", value: teacherInfo.studentsTaught, icon: User, color: "text-purple-500", hide: profile.role === 'student' },
+                { label: "Quizzes Joined", value: teacherInfo.studentsTaught, icon: Radio, color: "text-blue-500", hide: profile.role !== 'student' },
               ].filter(s => !s.hide).map((stat, i) => (
                 <motion.div 
                   key={stat.label}
@@ -340,14 +339,14 @@ export default function Profile() {
                   key={item.label}
                   onClick={item.onClick}
                   className={cn(
-                    "w-full p-6 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:shadow-md transition-all",
-                    item.danger ? "bg-error/5 hover:bg-error/10 border-error/10" : "bg-surface-container-lowest hover:bg-surface-container-low"
+                    "w-full p-6 rounded-2xl border border-outline-variant/10 flex items-center justify-between group hover:shadow-xl hover:-translate-y-1 transition-all duration-300",
+                    item.danger ? "bg-error/5 hover:bg-error/10 border-error/10" : "bg-surface-container-lowest hover:bg-surface-container-low/50"
                   )}
                 >
                   <div className="flex items-center gap-5">
                     <div className={cn(
                       "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                      item.danger ? "bg-error/10 text-error" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-primary"
+                      item.danger ? "bg-error/10 text-error" : "bg-primary/10 text-primary"
                     )}>
                       <item.icon className="w-6 h-6" />
                     </div>

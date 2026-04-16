@@ -12,7 +12,7 @@ export default function Onboarding() {
   const [fullName, setFullName] = useState('');
   const [bio, setBio] = useState('');
   const [department, setDepartment] = useState('');
-  const [role, setRole] = useState<'Teacher' | 'Student'>('Teacher');
+  const [role, setRole] = useState<'Educator' | 'Student'>('Educator');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -83,16 +83,16 @@ export default function Onboarding() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => setRole('Teacher')}
+                onClick={() => setRole('Educator')}
                 className={cn(
                   "p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-3",
-                  role === 'Teacher' 
+                  role === 'Educator' 
                     ? "border-primary bg-primary/5 text-primary" 
                     : "border-outline-variant/30 text-on-surface-variant hover:border-primary/50"
                 )}
               >
                 <Briefcase className="w-8 h-8" />
-                <span className="font-headline font-bold">Teacher</span>
+                <span className="font-headline font-bold">Educator</span>
               </button>
               <button
                 type="button"
@@ -147,7 +147,7 @@ export default function Onboarding() {
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-surface-container-low border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-body"
-                    placeholder={role === 'Teacher' ? "Computer Science" : "Grade 10-A"}
+                    placeholder={role === 'Educator' ? "Computer Science" : "Grade 10-A"}
                   />
                 </div>
               </div>
@@ -156,7 +156,7 @@ export default function Onboarding() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-label ml-1">
-              {role === 'Teacher' ? 'Professional Bio' : 'About Me'}
+              {role === 'Educator' ? 'Professional Bio' : 'About Me'}
             </label>
             <div className="relative group">
               <Info className="absolute left-4 top-6 w-5 h-5 text-outline group-focus-within:text-primary transition-colors" />
@@ -166,7 +166,7 @@ export default function Onboarding() {
                 onChange={(e) => setBio(e.target.value)}
                 rows={4}
                 className="w-full pl-12 pr-4 py-4 bg-surface-container-low border border-outline-variant/30 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-body resize-none"
-                placeholder={role === 'Teacher' ? "Share your passion for education..." : "Tell us about your interests..."}
+                placeholder={role === 'Educator' ? "Share your passion for education..." : "Tell us about your interests..."}
               />
             </div>
           </div>

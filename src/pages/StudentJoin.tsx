@@ -76,8 +76,13 @@ export default function StudentJoin() {
     }
 
     try {
-      await joinQuiz({ name, roll }, targetQuiz);
+      const joined = await joinQuiz({ name, roll }, targetQuiz);
       
+      if (!joined) {
+        setError("This quiz has either ended or is no longer active.");
+        return;
+      }
+
       // Check if this student already submitted
       const p = participants.find(part => part.roll === roll);
       if (p?.status === 'Submitted') {

@@ -48,19 +48,21 @@ export interface Participant {
   roll: string;
   progress: number;
   questionTimers?: Record<string, number>;
-  questionExpiries?: Record<string, number>; // Add this
+  questionExpiries?: Record<string, number>;
   status: 'Appearing' | 'Submitted' | 'Away';
- answers: Record<string, any>;
-  manualGrades?: Record<string, number>;
+  answers: Record<string, any>;
+  manualGrades?: Record<string, number>; // Map of question ID to points (0 to 1)
   questionOrder?: string[];
   optionOrders?: Record<string, string[]>;
   startTime?: number;
   lastSeen?: number;
   timeTaken?: number;
   score?: number;
-  query?: string; // Add this
+  cheatStrikes?: number;
+  query?: string;
   createdAt?: any;
 }
+
 interface QuizContextType {
   quiz: Quiz | null;
   quizzes: Quiz[];
@@ -176,11 +178,6 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       const activeQuiz = fetchedQuizzes.find(q => q.isActive);
       if (activeQuiz) {
         setQuiz(prev => {
-          // If we are already in a student session for a DIFFERENT quiz, don't overwrite it
-          if (prev && prev.id !== activeQuiz.id && currentStudentRoll) {
-            return prev;
-          }
-          // If we are already in a student session for the SAME quiz, preserve questions
           if (prev?.id === activeQuiz.id) {
             return { ...activeQuiz, questions: prev.questions || activeQuiz.questions };
           }
@@ -189,8 +186,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('activeRoomCode', activeQuiz.roomCode);
       } else {
         // Only clear if we were previously in a teacher-like state (monitoring a quiz)
-        // AND we are not currently participating as a student
-        if (localStorage.getItem('activeRoomCode') && !currentStudentRoll) {
+        if (localStorage.getItem('activeRoomCode')) {
           setQuiz(null);
           localStorage.removeItem('activeRoomCode');
         }
@@ -201,7 +197,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribeQuizzes();
-  }, [user, currentStudentRoll]);
+  }, [user]);
 
   // Restore quiz session for students from localStorage
   useEffect(() => {
@@ -512,15 +508,10 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   const calculateScore = (participant: Participant, quiz: Quiz, overrideQuestions?: Question[], excludeParagraphs: boolean = false): number => {
     let score = 0;
-    const allQuestions = overrideQuestions || quiz.questions || [];
-    
-    // Use participant's specific question order if available, otherwise use all questions
-    const relevantQuestionIds = participant.questionOrder || allQuestions.map(q => q.id);
-    const relevantQuestions = allQuestions.filter(q => relevantQuestionIds.includes(q.id));
-    
+    const questions = overrideQuestions || quiz.questions || [];
     const answers = participant.answers || {};
 
-    relevantQuestions.forEach(q => {
+    questions.forEach(q => {
       const studentAnswer = answers[q.id];
       if (!studentAnswer) return;
 

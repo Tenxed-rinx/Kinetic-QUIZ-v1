@@ -31,6 +31,7 @@ export default function StudentQuiz() {
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const timeLeftRef = React.useRef<number | null>(null);
+  const cheatProcessingRef = React.useRef(false);
 
   useEffect(() => {
     timeLeftRef.current = questionTimeLeft;
@@ -62,11 +63,9 @@ export default function StudentQuiz() {
   useEffect(() => {
     if (!currentStudentRoll || isFinished || quizEnded) return;
 
-    let isProcessing = false;
-
     const recordStrike = async () => {
-      if (isProcessing) return;
-      isProcessing = true;
+      if (cheatProcessingRef.current) return;
+      cheatProcessingRef.current = true;
       
       try {
         // Re-calculate strikes from current data
@@ -77,13 +76,16 @@ export default function StudentQuiz() {
           await handleCheatSubmit();
         } else {
           await updateParticipant(currentStudentRoll, { cheatStrikes: currentStrikes });
-          // Note: showCheatWarning will be set in the else block of visibility/focus check
+          // Force a small delay to prevent multiple triggers from same event cascade
+          setTimeout(() => {
+            cheatProcessingRef.current = false;
+          }, 1000);
+          return; // Skip finally block resetting immediately
         }
       } catch (err) {
         console.error("Failed to record cheat strike:", err);
-      } finally {
-        isProcessing = false;
-      }
+      } 
+      cheatProcessingRef.current = false;
     };
 
     const handleVisibilityChange = () => {

@@ -394,6 +394,9 @@ export default function QuizEditor() {
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
+                <button className="p-2 bg-surface-container-lowest border border-outline-variant/20 rounded-full shadow-sm hover:text-primary transition-colors">
+                  <Copy className="w-5 h-5" />
+                </button>
               </div>
 
               <div className="flex flex-col md:flex-row gap-8">
@@ -515,6 +518,32 @@ export default function QuizEditor() {
             <span className="font-bold text-sm uppercase tracking-widest">Add New Question</span>
           </button>
         </section>
+
+        <div className="mt-20 rounded-3xl overflow-hidden relative h-64 shadow-xl">
+          <img 
+            alt="Classroom atmosphere" 
+            className="w-full h-full object-cover grayscale opacity-20" 
+            src="https://picsum.photos/seed/classroom/1200/400" 
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+          <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
+            <div className="max-w-md">
+              <h3 className="text-2xl font-bold font-headline text-on-surface mb-2">Review Your Settings</h3>
+              <p className="text-sm text-on-surface-variant">Ensure your questions are peer-reviewed and time-calibrated for the best learning outcomes.</p>
+            </div>
+            <div className="hidden md:flex gap-4">
+              <div className="bg-surface-container-lowest p-4 rounded-2xl text-center shadow-sm min-w-[100px]">
+                <span className="block text-2xl font-bold text-primary">12</span>
+                <span className="text-[10px] font-bold uppercase text-on-surface-variant">Avg Minutes</span>
+              </div>
+              <div className="bg-surface-container-lowest p-4 rounded-2xl text-center shadow-sm min-w-[100px]">
+                <span className="block text-2xl font-bold text-tertiary">High</span>
+                <span className="text-[10px] font-bold uppercase text-on-surface-variant">Cognitive Load</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <AIChatAssistant />

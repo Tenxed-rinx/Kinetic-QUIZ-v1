@@ -159,19 +159,33 @@ export default function Dashboard() {
 
   const participationRate = totalParticipants > 0 ? 100 : 0;
 
-  // Calculate average raw score for the current quiz
-  let totalRawScore = 0;
-  let submittedCount = 0;
-  participants.forEach(p => {
-    if (p.status === 'Submitted') {
-      totalRawScore += truncateScore(p.score || 0);
-      submittedCount++;
-    }
-  });
-  const avgRawScore = submittedCount > 0 ? Math.round((totalRawScore / submittedCount) * 100) / 100 : 0;
+  // NEW: Corrected average score calculation (Σmarks / Σmax)
+  let totalMarksObtained = 0;
+  let totalMaxMarksPossible = 0;
+  const totalSubmissions = participants.length;
   
+  const scoreDetails: {score: number, max: number}[] = [];
+  participants.forEach(p => {
+    const totalScorable = p.questionOrder?.length || quiz.drawCount || quiz.questions?.length || 0;
+    const studentScore = truncateScore(p.score || 0);
+    
+    totalMarksObtained += studentScore;
+    totalMaxMarksPossible += totalScorable;
+    
+    scoreDetails.push({ score: studentScore, max: totalScorable });
+  });
+
+  const avgFinalScore = totalMaxMarksPossible > 0 ? (totalMarksObtained / totalMaxMarksPossible) : 0;
+  const avgRawScore = Number(avgFinalScore.toFixed(4));
+  const avgPercentage = Math.round(avgFinalScore * 100);
   const totalScorable = quiz.drawCount || quiz.questions?.length || 0;
-  const avgPercentage = totalScorable > 0 ? (avgRawScore / totalScorable) * 100 : 0;
+
+  // Log step-by-step for verification
+  console.log("Average Score Calculation (Corrected):");
+  console.log("Student Data:", scoreDetails);
+  console.log("Total Obtained:", totalMarksObtained);
+  console.log("Total Possible:", totalMaxMarksPossible);
+  console.log("Final Average:", avgRawScore, `(${avgPercentage}%)`);
 
   return (
     <div className="bg-surface min-h-screen pb-24">
@@ -307,17 +321,19 @@ export default function Dashboard() {
             transition={{ delay: 0.1 }}
             className="bg-surface-container-low p-8 rounded-3xl border-b-4 border-tertiary"
           >
-            <span className="font-label text-xs font-bold uppercase text-on-surface-variant">Average Score</span>
-            <div className="mt-4">
-              <div className="text-4xl font-black font-headline mb-2">
-                {avgRawScore}
-                <span className="text-sm text-on-surface-variant/50 ml-1">/{totalScorable}</span>
+            <span className="font-label text-xs font-bold uppercase text-on-surface-variant">Avg. Score</span>
+            <div className="mt-4 text-center">
+              <div className="text-5xl font-black font-headline mb-4 tracking-tighter text-tertiary">
+                {avgPercentage}%
               </div>
-              <div className="w-full bg-surface-container-highest h-3 rounded-full overflow-hidden">
-                <div 
-                  className="bg-tertiary h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${avgPercentage}%` }}
-                ></div>
+              <div className="flex items-center gap-3">
+                <div className="flex-grow bg-surface-container-highest h-3 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-tertiary h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${avgPercentage}%` }}
+                  ></div>
+                </div>
+                <span className="text-xl font-black font-headline text-tertiary/70">{avgPercentage}%</span>
               </div>
             </div>
           </motion.div>
@@ -379,15 +395,15 @@ export default function Dashboard() {
                       <td className="px-8 py-6 text-right">
                         <div className={cn(
                           "flex items-center justify-end gap-2 font-bold text-sm",
-                          student.status === 'Submitted' ? 'text-emerald-600' : 'text-primary'
+                          (student.status === 'Submitted' || (student.cheatStrikes && student.cheatStrikes >= 2)) ? 'text-emerald-600' : 'text-primary'
                         )}>
                           <span className={cn(
                             "w-2 h-2 rounded-full",
-                            student.status === 'Submitted' ? 'bg-emerald-500' : (
+                            (student.status === 'Submitted' || (student.cheatStrikes && student.cheatStrikes >= 2)) ? 'bg-emerald-500' : (
                               (student.lastSeen && Date.now() - student.lastSeen < 30000) ? 'bg-emerald-500 animate-pulse' : 'bg-outline-variant'
                             )
                           )}></span>
-                          {student.status === 'Submitted' ? 'Submitted' : (
+                          {(student.status === 'Submitted' || (student.cheatStrikes && student.cheatStrikes >= 2)) ? 'Submitted' : (
                             (student.lastSeen && Date.now() - student.lastSeen < 30000) ? 'Online' : 'Offline'
                           )}
                         </div>

@@ -200,8 +200,7 @@ export default function Dashboard() {
   });
   const avgRawScore = submittedCount > 0 ? Math.round((totalRawScore / submittedCount) * 100) / 100 : 0;
   
-  const scorableQuestions = quiz.questions?.filter(q => q.type !== 'Paragraph') || [];
-  const totalScorable = scorableQuestions.length;
+  const totalScorable = quiz.drawCount || quiz.questions?.length || 0;
   const avgPercentage = totalScorable > 0 ? (avgRawScore / totalScorable) * 100 : 0;
 
   return (

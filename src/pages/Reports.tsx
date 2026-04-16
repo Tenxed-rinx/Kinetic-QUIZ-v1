@@ -4,7 +4,7 @@ import { BarChart3, Users, Clock, Award, ChevronRight, Search, Filter, Clipboard
 import { motion, AnimatePresence } from "motion/react";
 import { useQuiz, Participant, Quiz, Question } from "@/src/context/QuizContext";
 import { cn } from "@/src/lib/utils";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -68,71 +68,125 @@ export default function Reports() {
     fetchParticipants();
   }, [user, quizzes]);
 
-  const getParticipantPercentage = (participant: Participant, quiz: Quiz) => {
-    const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
-    if (questions.length === 0) return 0;
-    
-    const rawScore = getRawScore(participant, quiz, questions);
-    return Math.round((rawScore / questions.length) * 100);
-  };
-
-  const stats = useMemo(() => {
-    const totalParticipants = allParticipants.length;
-    
-    let totalScore = 0;
-    let scoredParticipants = 0;
-
-    allParticipants.forEach(p => {
-      const quiz = quizzes.find(q => q.id === p.quizId);
-      if (quiz && p.status === 'Submitted') {
-        totalScore += getParticipantPercentage(p, quiz);
-        scoredParticipants++;
-      }
-    });
-
-    const avgScore = scoredParticipants > 0 ? Math.round(totalScore / scoredParticipants) : 0;
-    
-    return {
-      totalQuizzes: quizzes.length,
-      totalParticipants,
-      avgScore: `${avgScore}%`,
-      avgTime: "N/A"
-    };
-  }, [quizzes, allParticipants, quizQuestionsMap]);
-
-  const filteredQuizzes = useMemo(() => {
-    return quizzes.filter(q => q.title.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [quizzes, searchQuery]);
-
-  const getQuizStats = (quiz: Quiz) => {
+  const getQuizStats = useCallback((quiz: Quiz) => {
     const participants = allParticipants.filter(p => p.quizId === quiz.id);
     const submitted = participants.filter(p => p.status === 'Submitted');
     const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
     
-    let totalRawScore = 0;
+    let totalCorrectAnswers = 0;
+    let totalGradableAttempted = 0;
     let maxRawScore = 0;
-    let minRawScore = submitted.length > 0 ? questions.length : 0;
+    let minRawScore = submitted.length > 0 ? -1 : 0;
 
     submitted.forEach(p => {
+      // getRawScore returns total correct answers (excluding paragraph type)
       const rawScore = getRawScore(p, quiz, questions);
-      totalRawScore += rawScore;
+      totalCorrectAnswers += rawScore;
+      
+      // Calculate how many gradable questions were actually shown to this student
+      const studentQuestions = p.questionOrder 
+        ? questions.filter(q => p.questionOrder?.includes(q.id))
+        : questions;
+      const gradableCount = studentQuestions.filter(q => q.type !== 'Paragraph').length;
+      totalGradableAttempted += gradableCount;
+
       if (rawScore > maxRawScore) maxRawScore = rawScore;
-      if (rawScore < minRawScore) minRawScore = rawScore;
+      if (minRawScore === -1 || rawScore < minRawScore) minRawScore = rawScore;
     });
 
-    const avgRawScore = submitted.length > 0 ? Math.round((totalRawScore / submitted.length) * 100) / 100 : 0;
-    const avgPercentage = questions.length > 0 ? Math.round((avgRawScore / questions.length) * 100) : 0;
+    // Average Score (%) = (total correct from all students) / (total questions × total students) × 100
+    // Note: total questions × total students is equivalent to totalGradableAttempted
+    let totalPercentage = 0;
+
+submitted.forEach(p => {
+  const rawScore = getRawScore(p, quiz, questions);
+
+  const studentQuestions = p.questionOrder 
+    ? questions.filter(q => p.questionOrder?.includes(q.id))
+    : questions;
+
+  const gradableCount = studentQuestions.filter(q => q.type !== 'Paragraph').length;
+
+  const percentage = gradableCount > 0 
+    ? (rawScore / gradableCount) * 100 
+    : 0;
+
+  totalPercentage += percentage;
+});
+
+const avgPercentage = submitted.length > 0 
+  ? totalPercentage / submitted.length 
+  : 0;
+    const avgRawScore = submitted.length > 0 ? Math.round((totalCorrectAnswers / submitted.length) * 100) / 100 : 0;
+    const displayTotalQuestions = submitted.length > 0 
+      ? Math.round(totalGradableAttempted / submitted.length) 
+      : (quiz.drawCount || questions.filter(q => q.type !== 'Paragraph').length);
     
     return {
       count: participants.length,
       avgRawScore,
       avgPercentage,
       maxRawScore,
-      minRawScore: submitted.length > 0 ? minRawScore : 0,
-      totalQuestions: questions.length,
+      minRawScore: minRawScore === -1 ? 0 : minRawScore,
+      totalQuestions: displayTotalQuestions,
       date: quiz.createdAt ? (quiz.createdAt.toDate ? quiz.createdAt.toDate().toLocaleDateString() : new Date(quiz.createdAt).toLocaleDateString()) : 'N/A'
     };
+  }, [allParticipants, quizQuestionsMap, getRawScore]);
+
+  const getParticipantPercentage = useCallback((participant: Participant, quiz: Quiz) => {
+    const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
+    if (questions.length === 0) return 0;
+    
+    const rawScore = getRawScore(participant, quiz, questions);
+    
+    const studentQuestions = participant.questionOrder 
+      ? questions.filter(q => participant.questionOrder?.includes(q.id))
+      : questions;
+    const gradableCount = studentQuestions.filter(q => q.type !== 'Paragraph').length;
+    
+    if (gradableCount === 0) return 0;
+    return Math.round((rawScore / gradableCount) * 100);
+  }, [quizQuestionsMap, getRawScore]);
+
+  const stats = useMemo(() => {
+  let totalCorrect = 0;
+  let totalQuestionsAttempted = 0;
+
+  quizzes.forEach(quiz => {
+    const participants = allParticipants.filter(
+      p => p.quizId === quiz.id && p.status === 'Submitted'
+    );
+
+    const questions = quizQuestionsMap[quiz.id || ''] || quiz.questions || [];
+
+    participants.forEach(p => {
+      const rawScore = getRawScore(p, quiz, questions);
+
+      const studentQuestions = p.questionOrder 
+        ? questions.filter(q => p.questionOrder?.includes(q.id))
+        : questions;
+
+      const gradableCount = studentQuestions.filter(q => q.type !== 'Paragraph').length;
+
+      totalCorrect += rawScore;
+      totalQuestionsAttempted += gradableCount;
+    });
+  });
+
+  const avgScore = totalQuestionsAttempted > 0
+    ? Math.round((totalCorrect / totalQuestionsAttempted) * 100)
+    : 0;
+
+  return {
+    totalQuizzes: quizzes.length,
+    totalParticipants: allParticipants.length,
+    avgScore: `${avgScore}%`,
   };
+}, [quizzes, allParticipants, quizQuestionsMap, getRawScore]);
+
+  const filteredQuizzes = useMemo(() => {
+    return quizzes.filter(q => q.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [quizzes, searchQuery]);
 
   const handleExportData = (quiz: Quiz) => {
     const quizId = quiz.id;
@@ -175,7 +229,7 @@ export default function Reports() {
       return {
         Name: p.name,
         RollNumber: p.roll,
-        MarksScored: `${rawScore}/${questions.length}`,
+        MarksScored: `${rawScore}/${p.questionOrder?.length || questions.length}`,
         Status: p.status,
         TimeTaken: p.timeTaken ? `${p.timeTaken}s` : 'N/A',
         Responses: responses
@@ -195,11 +249,11 @@ export default function Reports() {
     const metadata = {
       QuizTitle: quiz.title,
       RoomCode: quiz.roomCode,
-      TotalQuestions: quiz.totalQuestions,
+      TotalQuestions: stats.totalQuestions,
       TotalStudentsAttended: stats.count,
-      TopperMarks: `${stats.maxRawScore}/${questions.length}`,
-      LowestMarks: `${stats.minRawScore}/${questions.length}`,
-      AverageScore: `${stats.avgRawScore}/${questions.length}`,
+      TopperMarks: `${stats.maxRawScore}/${stats.totalQuestions}`,
+      LowestMarks: `${stats.minRawScore}/${stats.totalQuestions}`,
+      AverageScore: `${stats.avgRawScore}/${stats.totalQuestions}`,
       Questions: questions.map((q, idx) => ({
         Number: idx + 1,
         Text: q.text,
@@ -284,7 +338,7 @@ export default function Reports() {
                   <p className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant mb-1">Average Score</p>
                   <p className="text-3xl font-headline font-black text-primary">
                     {getQuizStats(selectedQuiz).avgRawScore}
-                    <span className="text-sm text-on-surface-variant/50 ml-1">/{selectedQuiz.totalQuestions}</span>
+                    <span className="text-sm text-on-surface-variant/50 ml-1">/{getQuizStats(selectedQuiz).totalQuestions}</span>
                   </p>
                 </div>
                 <div className="w-px h-12 bg-outline-variant/30 mx-2"></div>
@@ -318,7 +372,6 @@ export default function Reports() {
                       <th className="px-6 py-4 font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant">Rank</th>
                       <th className="px-6 py-4 font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant">Student</th>
                       <th className="px-6 py-4 font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant">Roll Number</th>
-                      <th className="px-6 py-4 font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant">Progress</th>
                       <th className="px-6 py-4 font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant">Score</th>
                       <th className="px-6 py-4 font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant">Status</th>
                     </tr>
@@ -356,11 +409,6 @@ export default function Reports() {
                             </td>
                             <td className="px-6 py-5 font-body text-on-surface-variant">{p.roll}</td>
                             <td className="px-6 py-5">
-                              <span className="text-sm font-medium text-on-surface-variant">
-                                {p.progress + 1}/{selectedQuiz.totalQuestions}
-                              </span>
-                            </td>
-                            <td className="px-6 py-5">
                               <div className="flex items-center gap-3">
                                 <div className="w-24 h-2 bg-surface-container-high rounded-full overflow-hidden">
                                   <div className={cn(
@@ -374,7 +422,7 @@ export default function Reports() {
                                     score >= 80 ? "text-emerald-600" : score >= 50 ? "text-amber-600" : "text-error"
                                   )}>{score}%</span>
                                   <span className="text-[10px] text-on-surface-variant font-bold">
-                                    {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions)}/{selectedQuiz.totalQuestions}
+                                    {getRawScore(p, selectedQuiz, quizQuestionsMap[selectedQuiz.id!] || selectedQuiz.questions)}/{p.questionOrder?.length || selectedQuiz.totalQuestions}
                                   </span>
                                 </div>
                               </div>
@@ -651,12 +699,11 @@ export default function Reports() {
         </header>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {[
             { label: "Total Quizzes", value: stats.totalQuizzes, icon: ClipboardList, color: "bg-blue-500" },
             { label: "Total Participants", value: stats.totalParticipants.toLocaleString(), icon: Users, color: "bg-purple-500" },
             { label: "Avg. Score", value: stats.avgScore, icon: Award, color: "bg-amber-500" },
-            { label: "Avg. Time", value: stats.avgTime, icon: Clock, color: "bg-emerald-500" },
           ].map((stat, i) => (
             <motion.div 
               key={stat.label}
@@ -724,7 +771,7 @@ export default function Reports() {
                           <div className="h-full bg-primary rounded-full" style={{ width: `${qStats.avgPercentage}%` }}></div>
                         </div>
                         <span className="text-xs font-label font-bold text-primary mt-1 block">
-                          {qStats.avgRawScore}/{quiz.totalQuestions}
+                          {qStats.avgRawScore}/{qStats.totalQuestions}
                         </span>
                       </td>
                       <td className="px-6 py-5">

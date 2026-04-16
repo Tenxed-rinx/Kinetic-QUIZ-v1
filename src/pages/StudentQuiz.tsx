@@ -29,6 +29,8 @@ export default function StudentQuiz() {
   const [showLeaveWarning, setShowLeaveWarning] = useState(false);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [violationCount, setViolationCount] = useState(0);
+  const [showViolationWarning, setShowViolationWarning] = useState(false);
   const timeLeftRef = React.useRef<number | null>(null);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function StudentQuiz() {
     }
   };
 
-  const handleSubmit = async (isAutoAdvance = false) => {
+  const handleSubmit = async (isAutoAdvance = false, isViolationSubmit = false) => {
     if (submitting || !currentStudentRoll || !quiz || !currentQuestion) return;
     setSubmitting(true);
     
@@ -101,7 +103,7 @@ export default function StudentQuiz() {
         [currentQuestion.id]: isAutoAdvance ? 0 : (participant?.questionExpiries?.[currentQuestion.id] || Date.now())
       };
 
-      if (isLastQuestion) {
+      if (isLastQuestion || isViolationSubmit) {
         const timeTaken = participant?.startTime ? Math.floor((Date.now() - participant.startTime) / 1000) : 0;
         
         // Calculate score (excluding paragraphs for initial student score)
@@ -114,7 +116,8 @@ export default function StudentQuiz() {
           questionExpiries: updatedExpiries,
           progress: currentQuestionIndex,
           timeTaken,
-          score
+          score,
+          violationCount: isViolationSubmit ? 2 : (participant?.violationCount || 0)
         });
         setIsFinished(true);
         navigate("/score");
@@ -132,6 +135,57 @@ export default function StudentQuiz() {
       setSubmitting(false);
     }
   };
+
+  // Anti-cheating detection
+  useEffect(() => {
+    if (isFinished || quizEnded || !currentStudentRoll) return;
+
+    const handleViolation = async () => {
+      // Use a ref or a way to get the latest violationCount if possible, 
+      // but since this is an effect, we'll use the state.
+      // We need to be careful with multiple events firing at once.
+      
+      setViolationCount(prev => {
+        const next = prev + 1;
+        
+        if (next === 1) {
+          setShowViolationWarning(true);
+          // Sync to Firestore
+          updateParticipant(currentStudentRoll, { violationCount: 1 });
+        } else if (next >= 2) {
+          // Auto submit
+          handleSubmit(false, true);
+        }
+        
+        return next;
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleViolation();
+      }
+    };
+
+    const handleBlur = () => {
+      handleViolation();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [isFinished, quizEnded, currentStudentRoll, currentQuestionIndex]);
+
+  // Sync initial violation count from participant
+  useEffect(() => {
+    if (participant?.violationCount !== undefined) {
+      setViolationCount(participant.violationCount);
+    }
+  }, [participant?.violationCount]);
 
   useEffect(() => {
     if (currentQuestion && !isFinished && !quizEnded && currentStudentRoll) {
@@ -516,6 +570,34 @@ export default function StudentQuiz() {
                     Submit & Leave
                   </button>
                 </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Violation Warning Modal */}
+        <AnimatePresence>
+          {showViolationWarning && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/60 backdrop-blur-md">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                className="bg-surface-container-lowest p-8 rounded-3xl shadow-2xl border-2 border-error/20 max-w-md w-full text-center"
+              >
+                <div className="w-16 h-16 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertCircle className="w-8 h-8 text-error" />
+                </div>
+                <h3 className="font-headline text-2xl font-extrabold mb-4 text-on-surface">Warning!</h3>
+                <p className="text-on-surface-variant mb-8 leading-relaxed">
+                  You are not allowed to leave the test window. If you do this again, your quiz will be <span className="text-error font-bold underline">automatically submitted</span>.
+                </p>
+                <button 
+                  onClick={() => setShowViolationWarning(false)}
+                  className="w-full py-4 bg-primary text-on-primary font-headline font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                >
+                  I Understand
+                </button>
               </motion.div>
             </div>
           )}

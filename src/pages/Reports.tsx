@@ -678,11 +678,10 @@ export default function Reports() {
         </header>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
           {[
             { label: "Total Quizzes", value: stats.totalQuizzes, icon: ClipboardList, color: "bg-blue-500" },
             { label: "Total Participants", value: stats.totalParticipants.toLocaleString(), icon: Users, color: "bg-purple-500" },
-            { label: "Avg. Time", value: stats.avgTime, icon: Clock, color: "bg-emerald-500" },
           ].map((stat, i) => (
             <motion.div 
               key={stat.label}

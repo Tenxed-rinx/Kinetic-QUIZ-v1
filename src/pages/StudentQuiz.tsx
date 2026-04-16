@@ -99,11 +99,6 @@ export default function StudentQuiz() {
     };
 
     const handleBlur = () => {
-      // Blur can sometimes be sensitive (clicking taskbar), but the requirement
-      // is tab switch or minimize. VisibilityChange is better for that, 
-      // but if VisibilityChange fails, Blur is a backup.
-      // We only use Blur if VisibilityChange didn't already fire.
-      // Or we can rely on it if they switch to a different window entirely.
       recordStrike();
     };
 
@@ -113,14 +108,25 @@ export default function StudentQuiz() {
       }
     };
 
+    const handlePopState = (e: PopStateEvent) => {
+      // Prevent navigation back by pushing current state back to keep user on same screen
+      window.history.pushState(null, "", window.location.href);
+      recordStrike();
+    };
+
+    // Initialize history state to capture back button
+    window.history.pushState(null, "", window.location.href);
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleBlur);
     window.addEventListener("focus", handleFocus);
+    window.addEventListener("popstate", handlePopState);
     
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleBlur);
       window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("popstate", handlePopState);
     };
   }, [currentStudentRoll, isFinished, quizEnded, participant?.cheatStrikes]);
 

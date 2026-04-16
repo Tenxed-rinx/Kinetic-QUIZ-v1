@@ -76,6 +76,7 @@ export default function StudentQuiz() {
           await handleCheatSubmit();
         } else {
           await updateParticipant(currentStudentRoll, { cheatStrikes: currentStrikes });
+          setShowCheatWarning(true);
           // Force a small delay to prevent multiple triggers from same event cascade
           setTimeout(() => {
             cheatProcessingRef.current = false;

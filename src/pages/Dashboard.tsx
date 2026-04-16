@@ -1,6 +1,6 @@
 import TopAppBar from "@/src/components/TopAppBar";
 import BottomNavBar from "@/src/components/BottomNavBar";
-import { Copy, Filter, Download, PlusCircle, Radio, Search, ArrowRight, Award, Info, CheckCircle2 } from "lucide-react";
+import { Copy, Filter, Download, PlusCircle, Radio, Search, ArrowRight, Award, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useQuiz } from "@/src/context/QuizContext";
 import { Link, useNavigate } from "react-router-dom";
@@ -158,36 +158,6 @@ export default function Dashboard() {
   });
 
   const participationRate = totalParticipants > 0 ? 100 : 0;
-
-  // Ensure quiz is still active for the teacher to see the controls
-  if (quiz && !quiz.isActive && profile?.role !== 'Student') {
-    // If the quiz just ended, the teacher should see a link to reports
-    return (
-      <div className="bg-surface min-h-screen pb-24">
-        <TopAppBar />
-        <main className="max-w-screen-2xl mx-auto px-6 pt-20 flex flex-col items-center justify-center text-center">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-surface-container-lowest p-12 rounded-3xl shadow-sm border border-surface-container max-w-lg w-full"
-          >
-            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-            </div>
-            <h2 className="font-headline text-3xl font-extrabold mb-4">Quiz Session Ended</h2>
-            <p className="text-on-surface-variant mb-8">This quiz session has been completed. You can view the full performance reports now.</p>
-            <Link 
-              to="/reports"
-              className="inline-flex items-center justify-center px-8 py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
-            >
-              View Reports
-            </Link>
-          </motion.div>
-        </main>
-        <BottomNavBar />
-      </div>
-    );
-  }
 
   // Calculate average raw score for the current quiz
   let totalRawScore = 0;
@@ -403,7 +373,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-8 py-6 text-center">
                         <span className="bg-surface-container-highest px-3 py-1 rounded-full text-xs font-bold text-on-surface-variant">
-                          Question {student.progress + 1}/{quiz.totalQuestions}
+                          Question {student.progress + 1}/{totalScorable}
                         </span>
                       </td>
                       <td className="px-8 py-6 text-right">

@@ -25,6 +25,7 @@ export default function StudentQuiz() {
   const [selectedOption, setSelectedOption] = useState<string | string[] | null>(null);
   const [wordCount, setWordCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [showCheatWarning, setShowCheatWarning] = useState(false);
   const [quizEnded, setQuizEnded] = useState(false);
   const [showLeaveWarning, setShowLeaveWarning] = useState(false);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
@@ -56,6 +57,60 @@ export default function StudentQuiz() {
 
     return () => clearInterval(heartbeat);
   }, [currentStudentRoll, isFinished, quizEnded]);
+
+  // Cheat Detection: Visibility Change
+  useEffect(() => {
+    if (!currentStudentRoll || isFinished || quizEnded) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.hidden) {
+        // Tab hidden/Minimized
+        const currentStrikes = (participant?.cheatStrikes || 0) + 1;
+        
+        if (currentStrikes >= 2) {
+          // Second strike: Auto Submit
+          console.warn("Cheat detected: Second strike. Auto-submitting quiz.");
+          await handleCheatSubmit();
+        } else {
+          // First strike: Record it
+          await updateParticipant(currentStudentRoll, { cheatStrikes: currentStrikes });
+        }
+      } else {
+        // Tab visible again
+        if (participant?.cheatStrikes === 1 && !isFinished) {
+          setShowCheatWarning(true);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [currentStudentRoll, isFinished, quizEnded, participant?.cheatStrikes]);
+
+  const handleCheatSubmit = async () => {
+    if (submitting || !currentStudentRoll || !quiz) return;
+    setSubmitting(true);
+    
+    try {
+      const timeTaken = participant?.startTime ? Math.floor((Date.now() - participant.startTime) / 1000) : 0;
+      
+      // Calculate score based on CURRENT answers in participant object
+      const score = calculateScore(participant!, quiz, undefined, true);
+
+      await updateParticipant(currentStudentRoll, { 
+        status: 'Submitted',
+        timeTaken,
+        score,
+        cheatStrikes: 2
+      });
+      setIsFinished(true);
+      navigate("/score");
+    } catch (err) {
+      console.error("Cheat submission failed:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Browser-level warning for refresh/close
   useEffect(() => {
@@ -514,6 +569,46 @@ export default function StudentQuiz() {
                     className="flex-1 py-4 bg-error text-on-error font-headline font-bold rounded-xl shadow-lg shadow-error/20 hover:scale-[1.02] active:scale-95 transition-all"
                   >
                     Submit & Leave
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Cheat Warning Modal */}
+        <AnimatePresence>
+          {showCheatWarning && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-on-surface/40 backdrop-blur-xl">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                className="bg-surface rounded-[40px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] border border-outline-variant/20 max-w-md w-full overflow-hidden"
+              >
+                <div className="h-2 bg-error"></div>
+                <div className="p-10 text-center">
+                  <div className="w-24 h-24 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-8 relative">
+                    <div className="absolute inset-0 rounded-full animate-ping bg-error/20"></div>
+                    <AlertCircle className="w-12 h-12 text-error relative z-10" />
+                  </div>
+                  
+                  <h3 className="font-headline text-3xl font-black mb-4 text-on-surface tracking-tighter">
+                    Integrity Check
+                  </h3>
+                  
+                  <p className="text-on-surface-variant font-medium mb-10 leading-relaxed">
+                    We noticed you <span className="underline decoration-error decoration-2 underline-offset-4 font-bold text-on-surface italic">navigated away</span> from the quiz. 
+                    <br /><br />
+                    To maintain fairness, this is your <span className="text-error font-black uppercase">Final Warning</span>. If you switch tabs or minimize again, your quiz will be 
+                    <span className="underline decoration-error decoration-2 underline-offset-4 font-black mx-1">submitted immediately</span>.
+                  </p>
+                  
+                  <button 
+                    onClick={() => setShowCheatWarning(false)}
+                    className="w-full py-5 bg-on-surface text-surface font-headline font-black rounded-2xl shadow-xl hover:bg-on-surface/90 hover:scale-[1.02] active:scale-98 transition-all duration-300"
+                  >
+                    RETURN TO QUIZ
                   </button>
                 </div>
               </motion.div>

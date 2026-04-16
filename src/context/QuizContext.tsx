@@ -48,21 +48,19 @@ export interface Participant {
   roll: string;
   progress: number;
   questionTimers?: Record<string, number>;
-  questionExpiries?: Record<string, number>;
+  questionExpiries?: Record<string, number>; // Add this
   status: 'Appearing' | 'Submitted' | 'Away';
-  answers: Record<string, any>;
-  manualGrades?: Record<string, number>; // Map of question ID to points (0 to 1)
+ answers: Record<string, any>;
+  manualGrades?: Record<string, number>;
   questionOrder?: string[];
   optionOrders?: Record<string, string[]>;
   startTime?: number;
   lastSeen?: number;
   timeTaken?: number;
   score?: number;
-  violationCount?: number;
-  query?: string;
+  query?: string; // Add this
   createdAt?: any;
 }
-
 interface QuizContextType {
   quiz: Quiz | null;
   quizzes: Quiz[];
@@ -72,7 +70,7 @@ interface QuizContextType {
   createQuiz: (quiz: Quiz) => Promise<void>;
   resetQuiz: () => void;
   saveDraft: (draft: Partial<Quiz>) => void;
-  joinQuiz: (participant: Omit<Participant, 'id' | 'progress' | 'status' | 'answers' | 'questionOrder' | 'optionOrders'>, targetQuiz?: Quiz) => Promise<boolean>;
+  joinQuiz: (participant: Omit<Participant, 'id' | 'progress' | 'status' | 'answers' | 'questionOrder' | 'optionOrders'>) => Promise<void>;
   updateParticipant: (roll: string, updates: Partial<Participant>) => Promise<void>;
   endQuiz: (quizId: string) => Promise<void>;
   findQuizByRoomCode: (code: string) => Promise<Quiz | null>;
@@ -178,18 +176,21 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       const activeQuiz = fetchedQuizzes.find(q => q.isActive);
       if (activeQuiz) {
         setQuiz(prev => {
+          // If we are already in a student session for a DIFFERENT quiz, don't overwrite it
+          if (prev && prev.id !== activeQuiz.id && currentStudentRoll) {
+            return prev;
+          }
+          // If we are already in a student session for the SAME quiz, preserve questions
           if (prev?.id === activeQuiz.id) {
             return { ...activeQuiz, questions: prev.questions || activeQuiz.questions };
           }
           return activeQuiz;
         });
-        // We set activeRoomCode but we DON'T use it to clear the quiz if it's authored by us
         localStorage.setItem('activeRoomCode', activeQuiz.roomCode);
       } else {
-        // Only clear if we were previously in a teacher-like state (monitoring a quiz) 
-        // AND we don't have ANY active quizzes in our list anymore
-        // This prevents flickering if the query is still updating
-        if (localStorage.getItem('activeRoomCode') && fetchedQuizzes.length > 0) {
+        // Only clear if we were previously in a teacher-like state (monitoring a quiz)
+        // AND we are not currently participating as a student
+        if (localStorage.getItem('activeRoomCode') && !currentStudentRoll) {
           setQuiz(null);
           localStorage.removeItem('activeRoomCode');
         }
@@ -200,7 +201,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribeQuizzes();
-  }, [user]);
+  }, [user, currentStudentRoll]);
 
   // Restore quiz session for students from localStorage
   useEffect(() => {
@@ -241,25 +242,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     let unsubscribeParticipants = () => {};
 
     const isAuthor = user && quiz?.authorId === user.uid;
-    let unsubscribeQuiz = () => {};
 
-    if (quiz?.id) {
-      const quizRef = doc(db, 'quizzes', quiz.id);
-      unsubscribeQuiz = onSnapshot(quizRef, (docSnap) => {
-        if (docSnap.exists()) {
-          const quizData = docSnap.data() as Quiz;
-          // Only update if it's still active or if we're not the author (authors keep the object longer)
-          setQuiz(prev => {
-            if (!prev) return null;
-            // If the quiz just became inactive and we are NOT the author, we handle it elsewhere
-            // But if we ARE the author, we definitely want to stay informed
-            return { ...prev, ...quizData };
-          });
-        }
-      });
-    }
-
-    if (isAuthor && quiz?.id) {
+    if (isAuthor) {
       const participantsRef = collection(db, 'quizzes', quiz.id, 'responses');
       unsubscribeParticipants = onSnapshot(participantsRef, (snapshot) => {
         const fetchedParticipants = snapshot.docs.map(doc => ({
@@ -282,10 +266,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    return () => {
-      unsubscribeParticipants();
-      unsubscribeQuiz();
-    };
+    return () => unsubscribeParticipants();
   }, [quiz?.id, user?.uid, currentStudentRoll]);
 
   const createQuiz = async (newQuiz: Quiz) => {
@@ -351,9 +332,9 @@ export function QuizProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('currentStudentRoll');
   };
 
-  const joinQuiz = async (p: Omit<Participant, 'id' | 'progress' | 'status' | 'answers' | 'questionOrder' | 'optionOrders'>, targetQuiz?: Quiz): Promise<boolean> => {
+  const joinQuiz = async (p: Omit<Participant, 'id' | 'progress' | 'status' | 'answers' | 'questionOrder' | 'optionOrders'>, targetQuiz?: Quiz) => {
     const activeQuiz = targetQuiz || quiz;
-    if (!activeQuiz?.id || !activeQuiz.isActive) return false;
+    if (!activeQuiz?.id || !activeQuiz.isActive) return;
 
     // Ensure the quiz state is set in the context
     if (!quiz || quiz.id !== activeQuiz.id) {
@@ -368,7 +349,7 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         // Resume existing session
         setCurrentStudentRoll(p.roll);
         localStorage.setItem('currentStudentRoll', p.roll);
-        return true;
+        return;
       }
 
       // Shuffle questions and options
@@ -428,10 +409,8 @@ export function QuizProvider({ children }: { children: ReactNode }) {
         });
         localStorage.setItem('quizHistory', JSON.stringify(history.slice(-10))); // Keep last 10
       }
-      return true;
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `quizzes/${activeQuiz.id}/responses/${p.roll}`);
-      return false;
     }
   };
 
@@ -533,43 +512,39 @@ export function QuizProvider({ children }: { children: ReactNode }) {
 
   const calculateScore = (participant: Participant, quiz: Quiz, overrideQuestions?: Question[], excludeParagraphs: boolean = false): number => {
     let score = 0;
-    let questions = overrideQuestions || quiz.questions || [];
+    const allQuestions = overrideQuestions || quiz.questions || [];
     
-    // If we have a specific question order for the participant, use only those questions
-    if (!overrideQuestions && participant.questionOrder) {
-      questions = questions.filter(q => participant.questionOrder!.includes(q.id));
-    }
-
+    // Use participant's specific question order if available, otherwise use all questions
+    const relevantQuestionIds = participant.questionOrder || allQuestions.map(q => q.id);
+    const relevantQuestions = allQuestions.filter(q => relevantQuestionIds.includes(q.id));
+    
     const answers = participant.answers || {};
 
-    const normalizeAttribute = (ans: any) => {
-      if (ans === undefined || ans === null) return "";
-      if (Array.isArray(ans)) return ans.slice().sort().join(",");
-      return String(ans).trim().toUpperCase();
-    };
-
-    questions.forEach(q => {
+    relevantQuestions.forEach(q => {
       const studentAnswer = answers[q.id];
-      if (studentAnswer === undefined || studentAnswer === null) return;
+      if (!studentAnswer) return;
 
-      if (q.type === 'Paragraph') {
+      if (q.type === 'Multiple Choice' || q.type === 'MCQ' || q.type === 'True/False') {
+        if (studentAnswer === q.correctOption) {
+          score += 1;
+        }
+      } else if (q.type === 'Multiple Correct' || q.type === 'MSQ') {
+        const correctOptions = Array.isArray(q.correctOption) ? q.correctOption : [q.correctOption];
+        const studentOptions = Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer];
+        
+        if (correctOptions.length > 0) {
+          const correctSelected = studentOptions.filter(opt => correctOptions.includes(opt)).length;
+          const incorrectSelected = studentOptions.filter(opt => !correctOptions.includes(opt)).length;
+          
+          // Only give marks if NO incorrect options were selected
+          if (incorrectSelected === 0 && correctSelected > 0) {
+            score += (correctSelected / correctOptions.length);
+          }
+        }
+      } else if (q.type === 'Paragraph') {
         if (!excludeParagraphs && participant.manualGrades?.[q.id]) {
           score += participant.manualGrades[q.id];
         }
-        return;
-      }
-
-      // Check possible correct answer fields: correctOption, correctAnswer, or correctOptions
-      const correctAnswer = (q as any).correctAnswer || (q as any).correctOptions || q.correctOption;
-
-      console.log({
-        question: q.id,
-        studentAnswer,
-        correctAnswer
-      });
-
-      if (normalizeAttribute(studentAnswer) === normalizeAttribute(correctAnswer)) {
-        score += 1;
       }
     });
 

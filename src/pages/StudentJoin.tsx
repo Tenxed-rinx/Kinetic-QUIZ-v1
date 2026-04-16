@@ -67,7 +67,14 @@ export default function StudentJoin() {
       return;
     }
 
-    // Roll number validation
+    // Roll number format validation: YEAR-CODE-START-END
+    const rollPattern = /^[0-9]{4}-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i;
+    if (!rollPattern.test(roll)) {
+      setError("Invalid Roll Number format. Proper format is: YEAR-CODE-START-END (e.g., 2024-CS-1-10)");
+      return;
+    }
+
+    // Existing roll number type validation
     if (targetQuiz.allowedRollPatterns && targetQuiz.allowedRollPatterns.length > 0) {
       if (!isRollAllowed(roll, targetQuiz.allowedRollPatterns)) {
         setError(`The allowed types are ${targetQuiz.allowedRollPatterns.join(", ")} for further assistance talk to teacher.`);
@@ -179,7 +186,7 @@ export default function StudentJoin() {
                           value={roll}
                           onChange={(e) => { setRoll(e.target.value); setError(""); }}
                           className="w-full bg-surface-container-low border-0 border-b-2 border-transparent focus:border-primary focus:ring-0 text-xl font-headline font-bold py-4 px-4 placeholder:text-outline-variant/30 transition-all duration-300 rounded-t-lg" 
-                          placeholder="Enter your roll number" 
+                          placeholder="YEAR-CODE-START-END" 
                           type="text" 
                         />
                       </div>

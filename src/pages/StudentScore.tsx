@@ -18,6 +18,7 @@ export default function StudentScore() {
   const participant = participants.find(p => p.roll === currentStudentRoll);
   
   useEffect(() => {
+    // If no quiz or no student roll, redirect to join
     if (!currentStudentRoll || !quiz) {
       const timer = setTimeout(() => {
         navigate('/join');
@@ -82,6 +83,7 @@ export default function StudentScore() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full space-y-8"
         >
+          {/* Success Header */}
           <div className="text-center space-y-4">
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-emerald-600" />
@@ -94,7 +96,9 @@ export default function StudentScore() {
             </p>
           </div>
 
+          {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Your Score */}
             <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 text-center space-y-2 shadow-sm">
               <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Trophy className="w-5 h-5 text-primary" />
@@ -105,6 +109,7 @@ export default function StudentScore() {
               </p>
             </div>
 
+            {/* Time Taken */}
             <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 text-center space-y-2 shadow-sm">
               <div className="w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Clock className="w-5 h-5 text-secondary" />
@@ -115,6 +120,7 @@ export default function StudentScore() {
               </p>
             </div>
 
+            {/* Topper Marks */}
             <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/10 text-center space-y-2 shadow-sm">
               <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Trophy className="w-5 h-5 text-amber-600" />
@@ -126,6 +132,7 @@ export default function StudentScore() {
             </div>
           </div>
 
+          {/* Paragraph Warning */}
           {hasParagraphs && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
@@ -144,6 +151,7 @@ export default function StudentScore() {
             </motion.div>
           )}
 
+          {/* Actions */}
           <div className="space-y-4 pt-8">
             {!querySubmitted ? (
               <>

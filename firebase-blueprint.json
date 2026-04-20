@@ -16,9 +16,12 @@
           "description": "Allowed roll number patterns, e.g., '2023-IMG-001-061'."
         },
         "createdAt": { "type": "string", "format": "date-time", "description": "When the quiz was created." },
-        "isActive": { "type": "boolean", "description": "Whether the quiz is currently active." }
+        "isActive": { "type": "boolean", "description": "Whether the quiz is currently active." },
+        "status": { "type": "string", "enum": ["waiting", "starting", "active", "finished"], "description": "The current status of the quiz session." },
+        "customTimer": { "type": "integer", "description": "Default timer for all questions in this quiz." },
+        "startedAt": { "type": "string", "format": "date-time", "description": "When the teacher started the quiz countdown." }
       },
-      "required": ["title", "totalQuestions", "drawCount", "roomCode", "authorId", "createdAt", "isActive"]
+      "required": ["title", "totalQuestions", "drawCount", "roomCode", "authorId", "createdAt", "isActive", "status"]
     },
     "Question": {
       "title": "Question",
@@ -55,7 +58,6 @@
         "questionOrder": { "type": "array", "items": { "type": "string" } },
         "optionOrders": { "type": "object", "description": "Map of question IDs to shuffled option labels." },
         "startTime": { "type": "integer" },
-        "score": { "type": "number", "description": "The student's score calculation." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["quizId", "studentId", "name", "roll", "progress", "status", "answers", "createdAt"]

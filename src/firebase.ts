@@ -1,25 +1,24 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import firebaseConfig from '../firebase-applet-config.json';
 
-// Initialize Firebase SDK using Environment Variables (Safe for Public Repos)
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-};
+// Initialize Firebase SDK
+const isDemoMode = firebaseConfig.projectId === 'remixed-project-id' || !firebaseConfig.apiKey;
+
+if (isDemoMode) {
+  console.warn("Kinetic Educator is running in DEMO MODE. Data will not persist between sessions.");
+}
 
 const app = initializeApp(firebaseConfig);
-const databaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)";
-export const db = getFirestore(app, databaseId);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+export { isDemoMode };
 
 // Test connection to Firestore
 async function testConnection() {
+  if (isDemoMode) return;
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {

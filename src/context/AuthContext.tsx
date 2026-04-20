@@ -14,7 +14,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { auth, db, isDemoMode } from '../firebase';
 
 interface Profile {
   id: string;
@@ -28,7 +28,7 @@ interface Profile {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: User | any | null;
   profile: Profile | null;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -43,11 +43,24 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | any | null>(() => {
+    if (isDemoMode) {
+      const saved = localStorage.getItem('demo_user');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    if (isDemoMode) {
+      const saved = localStorage.getItem('demo_profile');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!isDemoMode);
 
   useEffect(() => {
+    if (isDemoMode) return;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
@@ -88,10 +101,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    if (isDemoMode) {
+      setUser(null);
+      setProfile(null);
+      localStorage.removeItem('demo_user');
+      localStorage.removeItem('demo_profile');
+      return;
+    }
     await firebaseSignOut(auth);
   };
 
   const signInWithGoogle = async () => {
+    if (isDemoMode) {
+      const mockUser = { uid: 'demo-teacher', displayName: 'Demo Teacher', email: 'demo@kinetic.edu' };
+      const mockProfile: Profile = {
+        id: 'demo-teacher',
+        full_name: 'Demo Teacher',
+        username: 'demoteacher',
+        avatar_url: 'https://picsum.photos/seed/teacher/100/100',
+        bio: 'Default demo account.',
+        department: 'Science',
+        role: 'teacher',
+        updated_at: new Date().toISOString()
+      };
+      setUser(mockUser);
+      setProfile(mockProfile);
+      localStorage.setItem('demo_user', JSON.stringify(mockUser));
+      localStorage.setItem('demo_profile', JSON.stringify(mockProfile));
+      return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
@@ -102,6 +140,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
+    if (isDemoMode) {
+      const mockUser = { uid: 'demo-teacher', displayName: 'Demo Teacher', email };
+      const mockProfile: Profile = {
+        id: 'demo-teacher',
+        full_name: 'Demo Teacher',
+        username: 'demoteacher',
+        avatar_url: 'https://picsum.photos/seed/teacher/100/100',
+        bio: 'Default demo account.',
+        department: 'Science',
+        role: 'teacher',
+        updated_at: new Date().toISOString()
+      };
+      setUser(mockUser);
+      setProfile(mockProfile);
+      localStorage.setItem('demo_user', JSON.stringify(mockUser));
+      localStorage.setItem('demo_profile', JSON.stringify(mockProfile));
+      return;
+    }
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -111,6 +167,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUpWithEmail = async (email: string, password: string, name: string, username: string, role: string) => {
+    if (isDemoMode) {
+      const mockUser = { uid: 'demo-' + Date.now(), displayName: name, email };
+      const mockProfile: Profile = {
+        id: mockUser.uid,
+        full_name: name,
+        username,
+        avatar_url: '',
+        bio: '',
+        department: '',
+        role,
+        updated_at: new Date().toISOString()
+      };
+      setUser(mockUser);
+      setProfile(mockProfile);
+      localStorage.setItem('demo_user', JSON.stringify(mockUser));
+      localStorage.setItem('demo_profile', JSON.stringify(mockProfile));
+      return;
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
